@@ -4,10 +4,12 @@ import sequelize from '../config/db.js';
 export class User extends Model {
   declare id: number;
   declare email: string;
-  declare password: string;
+  declare password?: string;
   declare role: 'seeker' | 'alumni';
   declare name: string;
   declare college: string;
+  declare googleId?: string;
+  declare githubId?: string;
   declare company?: string;
   declare jobTitle?: string;
   declare bio?: string;
@@ -44,7 +46,17 @@ User.init(
     },
     password: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
+    },
+    googleId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
+    githubId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
     },
     role: {
       type: DataTypes.STRING,
