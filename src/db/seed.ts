@@ -3,6 +3,7 @@ import sequelize from '../config/db.js';
 import { User } from '../models/User.js';
 import { ReferralRequest } from '../models/ReferralRequest.js';
 import { Message } from '../models/Message.js';
+import { UserActivity } from '../models/UserActivity.js';
 
 async function seed() {
   try {
@@ -253,6 +254,38 @@ async function seed() {
       },
     ]);
     console.log('Seeder: Chat messages created.');
+
+    // 7. Create User Activity Logs
+    const seedActivities = [];
+    const today = new Date();
+    
+    const activeUsers = [arjun, rahulMehta, priyaSharma];
+    
+    for (const activeUser of activeUsers) {
+      for (let i = 0; i < 168; i++) {
+        const activeChance = activeUser.id === arjun.id ? 0.35 : 0.2;
+        if (Math.random() < activeChance) {
+          const activityDate = new Date(today);
+          activityDate.setDate(today.getDate() - i);
+          
+          const year = activityDate.getFullYear();
+          const month = String(activityDate.getMonth() + 1).padStart(2, '0');
+          const day = String(activityDate.getDate()).padStart(2, '0');
+          const dateStr = `${year}-${month}-${day}`;
+          
+          const count = Math.floor(Math.random() * 15) + 1;
+          
+          seedActivities.push({
+            userId: activeUser.id,
+            date: dateStr,
+            count
+          });
+        }
+      }
+    }
+    
+    await UserActivity.bulkCreate(seedActivities);
+    console.log('Seeder: User activity logs created.');
 
     console.log('Seeder successfully completed execution!');
     process.exit(0);
