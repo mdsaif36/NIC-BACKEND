@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { User } from '../models/User.js';
+import { UserActivity } from '../models/UserActivity.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import multer from 'multer';
 import fs from 'fs';
@@ -200,6 +201,21 @@ router.get('/resume/download/:userId/:filename', authenticate as any, async (req
     fs.createReadStream(filePath).pipe(res);
   } catch (error: any) {
     res.status(500).json({ message: 'Error downloading resume.', error: error.message });
+  }
+});
+
+// Get User Activity Log
+router.get('/activity/:userId', authenticate as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const activities = await UserActivity.findAll({
+      where: { userId },
+      attributes: ['date', 'count'],
+      order: [['date', 'ASC']]
+    });
+    res.json(activities);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error retrieving user activity.', error: error.message });
   }
 });
 
