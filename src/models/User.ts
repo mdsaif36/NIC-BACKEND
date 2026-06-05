@@ -22,6 +22,7 @@ export class User extends Model {
   declare linkedinUrl?: string;
   declare resumeName?: string;
   declare resumeUploaded: boolean;
+  declare resumesHistory?: any[];
   declare referralsSentCount: number;
   declare availability: string;
   declare responseRate: string;
@@ -142,6 +143,17 @@ User.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    },
+    resumesHistory: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      get() {
+        const rawValue = this.getDataValue('resumesHistory');
+        return rawValue ? JSON.parse(rawValue) : [];
+      },
+      set(val: any[]) {
+        this.setDataValue('resumesHistory', val ? JSON.stringify(val) : JSON.stringify([]));
+      },
     },
     referralsSentCount: {
       type: DataTypes.INTEGER,
