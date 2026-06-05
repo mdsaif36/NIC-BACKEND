@@ -11,6 +11,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import requestRoutes from './routes/requests.js';
 import messageRoutes from './routes/messages.js';
+import './models/UserActivity.js';
 
 dotenv.config();
 
