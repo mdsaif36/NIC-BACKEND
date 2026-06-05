@@ -76,6 +76,7 @@ router.put('/profile', authenticate as any, async (req: AuthRequest, res: Respon
       targetCompanies,
       resumeUploaded,
       resumeName,
+      resumesHistory,
       availability,
       company,
       jobTitle
@@ -96,6 +97,7 @@ router.put('/profile', authenticate as any, async (req: AuthRequest, res: Respon
     if (targetCompanies !== undefined) user.targetCompanies = targetCompanies;
     if (resumeUploaded !== undefined) user.resumeUploaded = resumeUploaded;
     if (resumeName !== undefined) user.resumeName = resumeName;
+    if (resumesHistory !== undefined) user.resumesHistory = resumesHistory;
 
     // Alumni specific fields
     if (availability !== undefined) user.availability = availability;
