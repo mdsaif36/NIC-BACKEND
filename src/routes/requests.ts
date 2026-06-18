@@ -35,6 +35,24 @@ router.post('/', authenticate as any, async (req: AuthRequest, res: Response) =>
       status: 'pending',
     });
 
+    // Notify the alumni in real-time
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${alumniId}`).emit('new_request', {
+        id: request.id,
+        studentName: seeker.name,
+        class: `${seeker.branch || 'CSE'} ${seeker.year || '3rd Year'}, ${seeker.college || 'IIT Bombay'}`,
+        company: alumni.company || '',
+        role: targetRole,
+        score: '94% Match',
+        message: pitchMessage,
+        status: 'pending',
+        seekerId: seeker.id,
+        resumeName: seeker.resumeName || '',
+        resumeUploaded: seeker.resumeUploaded || false
+      });
+    }
+
     res.status(201).json(request);
   } catch (error: any) {
     res.status(500).json({ message: 'Error submitting referral request.', error: error.message });
@@ -133,6 +151,15 @@ router.put('/:id/status', authenticate as any, async (req: AuthRequest, res: Res
       alumni.referralsSentCount += 1;
       alumni.successRate = `${alumni.referralsSentCount} referred`;
       await alumni.save();
+    }
+
+    // Notify the seeker of the status update in real-time
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${request.seekerId}`).emit('request_status_update', {
+        id: request.id,
+        status: request.status,
+      });
     }
 
     res.json(request);
