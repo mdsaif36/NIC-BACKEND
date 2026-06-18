@@ -3,7 +3,16 @@ import { Request, Response, NextFunction } from 'express';
 import { User } from '../models/User.js';
 import { UserActivity } from '../models/UserActivity.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_nic_key';
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL ERROR: JWT_SECRET environment variable is not defined in production!');
+    process.exit(1);
+  } else {
+    console.warn('WARNING: JWT_SECRET environment variable is not defined. Using insecure local fallback key for development.');
+  }
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_nic_key_dev_only';
 
 // Interface to represent our request with user
 export interface AuthRequest extends Request {

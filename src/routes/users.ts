@@ -175,9 +175,14 @@ router.get('/resume/download/:userId/:filename', authenticate as any, async (req
   try {
     const { userId, filename } = req.params;
     
-    // Security check: only allow base name to prevent directory traversal
+    // Security check: prevent directory traversal by validating userId and filename
+    const parsedUserId = parseInt(userId, 10);
+    if (isNaN(parsedUserId) || parsedUserId <= 0 || String(parsedUserId) !== userId) {
+      return res.status(400).json({ message: 'Invalid user ID format.' });
+    }
+
     const cleanFilename = path.basename(filename);
-    const filePath = path.join(uploadDir, String(userId), cleanFilename);
+    const filePath = path.join(uploadDir, String(parsedUserId), cleanFilename);
     
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: 'Resume file not found.' });

@@ -4,6 +4,7 @@ import { User } from '../models/User.js';
 import { ReferralRequest } from '../models/ReferralRequest.js';
 import { Message } from '../models/Message.js';
 import { UserActivity } from '../models/UserActivity.js';
+import { ReferralPost } from '../models/ReferralPost.js';
 
 async function seed() {
   try {
@@ -286,6 +287,95 @@ async function seed() {
     
     await UserActivity.bulkCreate(seedActivities);
     console.log('Seeder: User activity logs created.');
+
+    // ── 5. Seed Referral Posts ────────────────────────────────────────────
+    const alumniUsers = await User.findAll({ where: { role: 'alumni' } });
+    const referralPostsData = [
+      {
+        company: 'Google', role: 'Software Engineer II', location: 'Bangalore, India',
+        jobType: 'Full-time', domain: 'Engineering',
+        skills: ['Go', 'Distributed Systems', 'Kubernetes', 'System Design'],
+        description: 'Looking to refer strong candidates for SWE-II role on Infrastructure team. Need solid DSA + system design background. Ideal for 2–4 years experience.',
+        deadline: '2026-07-15', slots: 2,
+      },
+      {
+        company: 'Google', role: 'ML Engineer Intern', location: 'Hyderabad, India',
+        jobType: 'Internship', domain: 'Data & AI',
+        skills: ['Python', 'TensorFlow', 'PyTorch', 'ML Pipelines'],
+        description: 'Google Brain intern referral open. Must have a strong ML project portfolio. Summer 2026 cohort. Resume needed.',
+        deadline: '2026-07-01', slots: 1,
+      },
+      {
+        company: 'Microsoft', role: 'Product Manager', location: 'Noida, India',
+        jobType: 'Full-time', domain: 'Product',
+        skills: ['Product Strategy', 'Analytics', 'Roadmapping', 'SQL'],
+        description: 'PM role on Azure Cognitive division. Looking for folks with prior internship PM experience and strong communication skills. MBA a plus.',
+        deadline: '2026-07-20', slots: 1,
+      },
+      {
+        company: 'Amazon', role: 'Data Scientist', location: 'Remote',
+        jobType: 'Full-time', domain: 'Data & AI',
+        skills: ['Python', 'Machine Learning', 'SQL', 'AWS SageMaker', 'Statistics'],
+        description: 'Working on Alexa recommendation systems. Looking for strong statistics background with ML experience. Must be comfortable presenting findings to stakeholders.',
+        deadline: '2026-07-10', slots: 2,
+      },
+      {
+        company: 'Stripe', role: 'Backend Engineer', location: 'Remote',
+        jobType: 'Full-time', domain: 'Engineering',
+        skills: ['Ruby', 'Go', 'APIs', 'Payments', 'PostgreSQL'],
+        description: 'Stripe is hiring backend engineers for the payments infrastructure team. Strong fundamentals required. Experience with financial systems is a big plus.',
+        deadline: '2026-08-01', slots: 3,
+      },
+      {
+        company: 'Netflix', role: 'Senior Frontend Engineer', location: 'Remote',
+        jobType: 'Full-time', domain: 'Engineering',
+        skills: ['React', 'TypeScript', 'GraphQL', 'Performance Optimization'],
+        description: 'Netflix UI platform team. Senior level (5+ years). Must have experience with high-traffic consumer apps and deep React knowledge.',
+        deadline: '2026-07-28', slots: 1,
+      },
+      {
+        company: 'Flipkart', role: 'SDE-2 Backend', location: 'Bangalore, India',
+        jobType: 'Full-time', domain: 'Engineering',
+        skills: ['Java', 'Spring Boot', 'Microservices', 'Kafka', 'MySQL'],
+        description: 'Flipkart Supply Chain tech team. Looking for SDE-2 candidates with Java + distributed systems experience. Strong coding round performance expected.',
+        deadline: '2026-07-05', slots: 2,
+      },
+      {
+        company: 'Razorpay', role: 'Product Designer', location: 'Bangalore, India',
+        jobType: 'Full-time', domain: 'Design',
+        skills: ['Figma', 'UX Research', 'Interaction Design', 'Design Systems'],
+        description: 'Hiring product designers for fintech B2B dashboard products. Portfolio with end-to-end case studies needed. Figma proficiency essential.',
+        deadline: '2026-07-18', slots: 1,
+      },
+      {
+        company: 'Meesho', role: 'Growth Marketing Intern', location: 'Bangalore, India',
+        jobType: 'Internship', domain: 'Marketing',
+        skills: ['Growth Hacking', 'Analytics', 'A/B Testing', 'SQL'],
+        description: 'Meesho growth team internship for Summer 2026. Need someone data-driven who can run A/B experiments. Experience with Meta/Google ads a bonus.',
+        deadline: '2026-06-30', slots: 1,
+      },
+      {
+        company: 'Atlassian', role: 'SRE / DevOps Engineer', location: 'Remote',
+        jobType: 'Full-time', domain: 'Engineering',
+        skills: ['Terraform', 'AWS', 'Docker', 'Kubernetes', 'CI/CD'],
+        description: 'Atlassian infrastructure team is hiring SRE. Must have strong cloud experience (AWS preferred). IaC with Terraform is a must-have.',
+        deadline: '2026-07-25', slots: 2,
+      },
+    ];
+
+    let postIndex = 0;
+    for (const postData of referralPostsData) {
+      const alumni = alumniUsers[postIndex % alumniUsers.length];
+      await ReferralPost.create({
+        alumniId: alumni.id,
+        ...postData,
+        isActive: true,
+        viewCount: Math.floor(Math.random() * 80) + 10,
+        applyCount: Math.floor(Math.random() * 20) + 2,
+      });
+      postIndex++;
+    }
+    console.log('Seeder: Referral posts created.');
 
     console.log('Seeder successfully completed execution!');
     process.exit(0);
