@@ -59,6 +59,26 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
     req.user = user;
 
+    // Monthly credit reset for seekers on-demand
+    if (user.role === 'seeker') {
+      try {
+        const now = new Date();
+        const lastReset = user.lastCreditReset ? new Date(user.lastCreditReset) : null;
+        
+        const shouldReset = !lastReset || 
+          now.getFullYear() > lastReset.getFullYear() || 
+          (now.getFullYear() === lastReset.getFullYear() && now.getMonth() > lastReset.getMonth());
+          
+        if (shouldReset) {
+          user.referralCreditsRemaining = user.monthlyReferralLimit || 4;
+          user.lastCreditReset = now;
+          await user.save();
+        }
+      } catch (saveErr) {
+        console.error('Error resetting seeker credits:', saveErr);
+      }
+    }
+
     // Record activity asynchronously so we do not block request fulfillment
     recordActivity(user.id).catch(err => console.error('Activity recording failed:', err));
 

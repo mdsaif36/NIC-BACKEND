@@ -10,6 +10,8 @@ export class ReferralRequest extends Model {
   declare timeline: string;
   declare pitchMessage: string;
   declare status: 'pending' | 'accepted' | 'declined' | 'hired' | 'referred' | 'info';
+  declare rating?: number;
+  declare ratingFeedback?: string;
 }
 
 ReferralRequest.init(
@@ -54,6 +56,18 @@ ReferralRequest.init(
       validate: {
         isIn: [['pending', 'accepted', 'declined', 'hired', 'referred', 'info']],
       },
+    },
+    rating: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      validate: {
+        min: 1,
+        max: 5,
+      },
+    },
+    ratingFeedback: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
   },
   {

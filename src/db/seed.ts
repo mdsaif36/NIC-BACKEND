@@ -32,8 +32,25 @@ async function seed() {
         referralsSentCount: 8,
         availability: 'Available Now',
         responseRate: '92%',
-        responseSpeed: 'Within 1 day',
+        responseSpeed: 'Within 8 hours',
         successRate: '8 referred',
+        companyEmail: 'rahul@google.com',
+        isEmailVerified: true,
+        isLinkedinVerified: true,
+        isAdminVerified: true,
+        verifiedAt: new Date(),
+        experience: '3 Years',
+        canHelpWith: ['Referrals', 'Resume Review', 'System Design Help'],
+        successStories: [
+          { studentName: 'Ahmed', studentCollege: 'KIIT', company: 'Google' },
+          { studentName: 'Rohan', studentCollege: 'IIT Delhi', company: 'Google' }
+        ],
+        phone: '+91 98765 43210',
+        isPrivateProfile: false,
+        hideEmail: false,
+        hidePhone: false,
+        hideLinkedIn: false,
+        hideCompanyEmail: false,
       },
       {
         name: 'Priya Sharma',
@@ -49,6 +66,20 @@ async function seed() {
         responseRate: '89%',
         responseSpeed: 'Within 2 days',
         successRate: '5 referred',
+        companyEmail: 'priya@microsoft.com',
+        isEmailVerified: true,
+        isLinkedinVerified: true,
+        experience: '4 Years',
+        canHelpWith: ['Referrals', 'Resume Review', 'Career Guidance'],
+        successStories: [
+          { studentName: 'Priya', studentCollege: 'VIT', company: 'Microsoft' }
+        ],
+        phone: '+91 98765 43211',
+        isPrivateProfile: false,
+        hideEmail: false,
+        hidePhone: false,
+        hideLinkedIn: false,
+        hideCompanyEmail: false,
       },
       {
         name: 'Amit Kumar',
@@ -64,6 +95,19 @@ async function seed() {
         responseRate: '60%',
         responseSpeed: 'Within 5 days',
         successRate: '3 referred',
+        companyEmail: 'amit@amazon.com',
+        isEmailVerified: true,
+        experience: '2 Years',
+        canHelpWith: ['Resume Review', 'Career Guidance'],
+        successStories: [
+          { studentName: 'Rahul', studentCollege: 'NIT', company: 'Amazon' }
+        ],
+        phone: '+91 98765 43212',
+        isPrivateProfile: false,
+        hideEmail: false,
+        hidePhone: false,
+        hideLinkedIn: false,
+        hideCompanyEmail: false,
       },
       {
         name: 'Sneha Iyer',
@@ -79,6 +123,23 @@ async function seed() {
         responseRate: '95%',
         responseSpeed: 'Within 8 hours',
         successRate: '12 referred',
+        companyEmail: 'sneha@google.com',
+        isEmailVerified: true,
+        isLinkedinVerified: true,
+        isAdminVerified: true,
+        verifiedAt: new Date(),
+        experience: '5 Years',
+        canHelpWith: ['Referrals', 'Resume Review', 'Mock Interviews', 'ML Mentorship'],
+        successStories: [
+          { studentName: 'Anisha', studentCollege: 'BITS Pilani', company: 'Google' },
+          { studentName: 'Vikas', studentCollege: 'IIT Madras', company: 'Google' }
+        ],
+        phone: '+91 98765 43213',
+        isPrivateProfile: false,
+        hideEmail: false,
+        hidePhone: false,
+        hideLinkedIn: false,
+        hideCompanyEmail: false,
       },
       {
         name: 'Karan Patel',
@@ -94,6 +155,17 @@ async function seed() {
         responseRate: '80%',
         responseSpeed: 'Within 3 days',
         successRate: '4 referred',
+        experience: '3 Years',
+        canHelpWith: ['Referrals', 'Resume Review', 'Mock Interviews'],
+        successStories: [
+          { studentName: 'Samir', studentCollege: 'IIT Bombay', company: 'Meta' }
+        ],
+        phone: '+91 98765 43214',
+        isPrivateProfile: false,
+        hideEmail: false,
+        hidePhone: false,
+        hideLinkedIn: false,
+        hideCompanyEmail: false,
       },
       {
         name: 'Ananya Reddy',
@@ -109,6 +181,17 @@ async function seed() {
         responseRate: '55%',
         responseSpeed: 'Within 6 days',
         successRate: '9 referred',
+        experience: '7 Years',
+        canHelpWith: ['Mock Interviews', 'Career Guidance'],
+        successStories: [
+          { studentName: 'Sanjay', studentCollege: 'IIT Kharagpur', company: 'Flipkart' }
+        ],
+        phone: '+91 98765 43215',
+        isPrivateProfile: false,
+        hideEmail: false,
+        hidePhone: false,
+        hideLinkedIn: false,
+        hideCompanyEmail: false,
       },
     ];
 
@@ -145,6 +228,73 @@ async function seed() {
       targetCompanies: ['Google', 'Microsoft', 'Amazon'],
       resumeName: 'arjun_resume.pdf',
       resumeUploaded: true,
+      projects: ['PrepNerve', 'NextInCampus'],
+      careerIntelligence: {
+        readinessScore: 87,
+        factors: {
+          resumeQuality: 88,
+          projectQuality: 92,
+          githubActivity: 84,
+          profileCompleteness: 90,
+          targetCompanyAlignment: 85
+        },
+        benchmarks: {
+          Google: {
+            score: 78,
+            required: ["DSA", "Projects", "OS", "DBMS", "Git"],
+            missing: ["Strong DSA Proof", "Competitive Programming"]
+          },
+          Microsoft: {
+            score: 84,
+            required: ["Backend", "Cloud", "System Design", "Git"],
+            missing: ["Cloud Infrastructure Optimization"]
+          },
+          Amazon: {
+            score: 86,
+            required: ["Leadership", "Java", "Problem Solving"],
+            missing: ["Leadership Principles Case-study"]
+          }
+        },
+        projectsAnalysis: [
+          {
+            name: "NextInCampus",
+            complexity: 9,
+            stack: "React, Node.js, PostgreSQL, Socket.io",
+            verdict: "Strong Full Stack Project. Complex state synchronization and live sockets."
+          },
+          {
+            name: "PrepNerve",
+            complexity: 8,
+            stack: "Python, SQL, AWS",
+            verdict: "Solid backend system with cloud deployment tracking."
+          }
+        ],
+        githubStrength: {
+          score: 84,
+          strong: ["Backend Architecture", "REST API Development"],
+          weak: ["Automated Unit Testing", "Comprehensive Documentation"]
+        },
+        linkedinStrength: {
+          score: 61,
+          missing: ["About Section (Professional Summary)", "Featured Projects Links", "Alumni Recommendations"]
+        },
+        alumniPerspective: {
+          role: "Google SDE-II",
+          referral: "YES",
+          reasons: ["Solid hands-on fullstack projects", "Matching tech stack with target teams"],
+          concerns: ["Missing formal system design analysis", "Resume metrics lack quantified business impact"]
+        },
+        successPrediction: {
+          interviewProb: 78,
+          offerProb: 43
+        },
+        roadmap: [
+          "Contribute to 1 open-source repository to demonstrate collaboration",
+          "Add 2 core DSA backend projects focusing on trees and graph traversals",
+          "Implement unit testing suites using Jest/Mocha to resolve testing gaps",
+          "Expand LinkedIn profile by adding featured project URLs and requesting peer endorsements"
+        ]
+      }
     });
     console.log('Seeder: Default seeker "Arjun Singh" created.');
 
@@ -160,6 +310,7 @@ async function seed() {
       bio: 'CSE Junior at IITD focusing on fullstack development and systems.',
       resumeName: 'amit_sharma_cv.pdf',
       resumeUploaded: true,
+      projects: ['CampusVentures', 'MockPrep'],
     });
 
     const karanPatelSeeker = await User.create({
@@ -173,6 +324,7 @@ async function seed() {
       bio: 'Final year EE student interested in Software Engineering.',
       resumeName: 'karan_patel_cv.pdf',
       resumeUploaded: true,
+      projects: ['ReactCanvas', 'PerfDOM'],
     });
     console.log('Seeder: Seeker profiles created.');
 

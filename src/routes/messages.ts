@@ -3,15 +3,24 @@ import { Op } from 'sequelize';
 import { Message } from '../models/Message.js';
 import { User } from '../models/User.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
+import { logAudit } from '../middleware/audit.js';
+import { notifyUser } from '../utils/notificationService.js';
 
 const router = Router();
 
-// Get Conversations list
+/**
+ * @swagger
+ * /api/messages/conversations:
+ *   get:
+ *     summary: Get all conversations for the current user
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ */
 router.get('/conversations', authenticate as any, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
 
-    // Fetch all messages involving the current user
     const messages = await Message.findAll({
       where: {
         [Op.or]: [{ senderId: userId }, { receiverId: userId }],
@@ -19,13 +28,11 @@ router.get('/conversations', authenticate as any, async (req: AuthRequest, res: 
       order: [['createdAt', 'DESC']],
     });
 
-    // Group by unique partner ID and pick the last message
+    // Group by unique partner — keep only last message per partner
     const partnersMap = new Map<number, Message>();
     messages.forEach((msg) => {
       const partnerId = msg.senderId === userId ? msg.receiverId : msg.senderId;
-      if (!partnersMap.has(partnerId)) {
-        partnersMap.set(partnerId, msg);
-      }
+      if (!partnersMap.has(partnerId)) partnersMap.set(partnerId, msg);
     });
 
     const partnerIds = Array.from(partnersMap.keys());
@@ -50,7 +57,6 @@ router.get('/conversations', authenticate as any, async (req: AuthRequest, res: 
       };
     });
 
-    // Sort conversations by last message time descending
     conversations.sort((a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime());
 
     res.json(conversations);
@@ -59,7 +65,21 @@ router.get('/conversations', authenticate as any, async (req: AuthRequest, res: 
   }
 });
 
-// Get Chat History with a specific user
+/**
+ * @swagger
+ * /api/messages/history/{partnerId}:
+ *   get:
+ *     summary: Get full chat history with a specific user
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: partnerId
+ *         required: true
+ *         schema:
+ *           type: integer
+ */
 router.get('/history/:partnerId', authenticate as any, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -81,10 +101,28 @@ router.get('/history/:partnerId', authenticate as any, async (req: AuthRequest, 
   }
 });
 
-// Send Chat Message Route
+/**
+ * @swagger
+ * /api/messages:
+ *   post:
+ *     summary: Send a chat message
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [receiverId, text]
+ *             properties:
+ *               receiverId: { type: integer }
+ *               text:       { type: string }
+ */
 router.post('/', authenticate as any, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const sender = req.user!;
     const { receiverId, text } = req.body;
 
     if (!receiverId || !text) {
@@ -92,49 +130,61 @@ router.post('/', authenticate as any, async (req: AuthRequest, res: Response) =>
     }
 
     const message = await Message.create({
-      senderId: userId,
+      senderId: sender.id,
       receiverId,
       text,
       isSystem: false,
     });
 
-    // Notify receiver via Socket.IO if they are connected
+    // ── Notify receiver ────────────────────────────────────────────────────────
+    await notifyUser(req.app, {
+      userId: receiverId,
+      type: 'message_received',
+      title: `💬 New message from ${sender.name}`,
+      message: text.length > 80 ? text.slice(0, 80) + '…' : text,
+      actionUrl: '?tab=messages',
+      metadata: { senderId: sender.id, senderName: sender.name, messageId: message.id },
+    });
+
+    // Audit
+    logAudit(req, 'MESSAGE_SENT', 'Message', message.id, { receiverId, textLength: text.length });
+
+    // Socket.IO live delivery
     const io = req.app.get('io');
     if (io) {
-      // Emit to rooms representing sender and receiver
       io.to(`user_${receiverId}`).emit('message', message.toJSON());
-      io.to(`user_${userId}`).emit('message', message.toJSON());
+      io.to(`user_${sender.id}`).emit('message', message.toJSON());
     }
 
-    // Simulating alumni responses for seeded mentors to support rich single-player testing
+    // ── Seeded mentor auto-reply (dev / demo mode) ─────────────────────────────
     const receiver = await User.findByPk(receiverId);
     if (receiver && receiver.role === 'alumni' && receiver.id <= 6) {
       setTimeout(async () => {
         try {
           let replyText = `Hey! Thanks for reaching out. I've received your note and will review your profile shortly. Let me know if you have specific questions about ${receiver.company}!`;
           const lowerText = text.toLowerCase();
-          
-          if (lowerText.includes('refer') || lowerText.includes('referral') || lowerText.includes('resume') || lowerText.includes('cv')) {
+
+          if (lowerText.includes('refer') || lowerText.includes('resume') || lowerText.includes('cv')) {
             replyText = `Your profile looks really promising! I will review your projects and submit a referral request on our internal ${receiver.company} career portal today. Keep an eye on your email!`;
-          } else if (lowerText.includes('schedule') || lowerText.includes('call') || lowerText.includes('chat') || lowerText.includes('meeting')) {
-            replyText = `I'd love to jump on a quick call to chat about the role! Please use the 'Schedule Call' button above to pick a convenient time on my calendar, and we can align.`;
-          } else if (lowerText.includes('thank') || lowerText.includes('thanks') || lowerText.includes('appreciate')) {
-            replyText = `You're very welcome! Always happy to help motivated juniors. Let me know how the interview loops go!`;
+          } else if (lowerText.includes('schedule') || lowerText.includes('call') || lowerText.includes('meeting')) {
+            replyText = `I'd love to jump on a quick call! Please use the 'Schedule Call' button above to pick a time on my calendar.`;
+          } else if (lowerText.includes('thank')) {
+            replyText = `You're very welcome! Always happy to help motivated juniors. Let me know how the interviews go!`;
           }
 
           const replyMsg = await Message.create({
             senderId: receiverId,
-            receiverId: userId,
+            receiverId: sender.id,
             text: replyText,
             isSystem: false,
           });
 
           if (io) {
-            io.to(`user_${userId}`).emit('message', replyMsg.toJSON());
+            io.to(`user_${sender.id}`).emit('message', replyMsg.toJSON());
             io.to(`user_${receiverId}`).emit('message', replyMsg.toJSON());
           }
         } catch (err) {
-          console.error("Auto-reply logic error:", err);
+          console.error('Auto-reply error:', err);
         }
       }, 2000);
     }
@@ -145,10 +195,29 @@ router.post('/', authenticate as any, async (req: AuthRequest, res: Response) =>
   }
 });
 
-// Schedule Call Route
+/**
+ * @swagger
+ * /api/messages/schedule:
+ *   post:
+ *     summary: Schedule a call (creates a system message)
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [receiverId, date, time]
+ *             properties:
+ *               receiverId: { type: integer }
+ *               date:       { type: string }
+ *               time:       { type: string }
+ */
 router.post('/schedule', authenticate as any, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const sender = req.user!;
     const { receiverId, date, time } = req.body;
 
     if (!receiverId || !date || !time) {
@@ -158,17 +227,29 @@ router.post('/schedule', authenticate as any, async (req: AuthRequest, res: Resp
     const scheduledText = `📅 Scheduled a call for ${date} at ${time}. (Video Call Room Ready)`;
 
     const message = await Message.create({
-      senderId: userId,
+      senderId: sender.id,
       receiverId,
       text: scheduledText,
       isSystem: true,
     });
 
-    // Notify receiver via Socket.IO if connected
+    // Notify receiver
+    await notifyUser(req.app, {
+      userId: receiverId,
+      type: 'meeting_scheduled',
+      title: '📅 Meeting Scheduled',
+      message: `${sender.name} has scheduled a call for ${date} at ${time}.`,
+      actionUrl: '?tab=messages',
+      metadata: { senderId: sender.id, senderName: sender.name, date, time },
+    });
+
+    // Audit
+    logAudit(req, 'MEETING_SCHEDULED', 'Message', message.id, { receiverId, date, time });
+
     const io = req.app.get('io');
     if (io) {
       io.to(`user_${receiverId}`).emit('message', message.toJSON());
-      io.to(`user_${userId}`).emit('message', message.toJSON());
+      io.to(`user_${sender.id}`).emit('message', message.toJSON());
     }
 
     res.status(201).json(message);
