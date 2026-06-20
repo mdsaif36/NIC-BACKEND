@@ -1,131 +1,106 @@
-import fs from 'fs';
-import path from 'path';
-import { Request } from 'express';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
 
-// ─── Storage Service ───────────────────────────────────────────────────────────
-// Abstraction layer for file storage. Currently uses local disk.
-//
-// To switch to AWS S3 later:
-//   1. npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner multer-s3
-//   2. Replace the LocalStorageProvider class with an S3Provider class.
-//   3. Update StorageService.upload() to call S3Provider.upload().
-//   4. Zero route changes needed — all routes call storageService.upload() etc.
-//
-// S3 bucket structure (future):
-//   s3://nextincampus/resumes/{userId}/{filename}
-//   s3://nextincampus/screenshots/{userId}/{filename}
-// ──────────────────────────────────────────────────────────────────────────────
+// ─── Supabase / AWS S3 Storage Provider ────────────────────────────────────────
 
 export interface UploadedFile {
   fieldname: string;
   originalname: string;
   mimetype: string;
   size: number;
-  /** Local: absolute path on disk. S3: full S3 key. */
   path: string;
-  /** URL or path the client can use to request the file. */
   url: string;
 }
 
-export interface DownloadResult {
-  /** Absolute local path or a presigned S3 URL. */
-  url: string;
-  /** Whether the result is a redirect URL (true for S3 presigned) or a local path. */
-  isRedirect: boolean;
-}
+class S3Provider {
+  private s3Client: S3Client;
+  private bucket: string;
+  private prefix: string;
 
-// ─── Local Storage Provider ────────────────────────────────────────────────────
+  constructor(prefix: string) {
+    this.prefix = prefix;
+    this.bucket = process.env.AWS_S3_BUCKET || 'nextincampus-files';
+    
+    // The endpoint is required for Supabase to act like AWS S3
+    const endpoint = process.env.AWS_ENDPOINT;
 
-class LocalStorageProvider {
-  private baseDir: string;
-
-  constructor(baseDir: string) {
-    this.baseDir = baseDir;
-    if (!fs.existsSync(this.baseDir)) {
-      fs.mkdirSync(this.baseDir, { recursive: true });
-    }
+    this.s3Client = new S3Client({
+      region: process.env.AWS_REGION || 'ap-south-1',
+      endpoint: endpoint,
+      forcePathStyle: !!endpoint, // Must be true for Supabase
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+      },
+    });
   }
 
-  getUserDir(userId: string | number): string {
-    const dir = path.join(this.baseDir, String(userId));
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    return dir;
-  }
-
-  /**
-   * Move/save an already-multer-processed file (multer.memoryStorage or diskStorage).
-   * Returns a structured UploadedFile descriptor.
-   */
-  saveFile(userId: string | number, filename: string, buffer: Buffer): UploadedFile {
-    const dir = this.getUserDir(userId);
-    const filePath = path.join(dir, filename);
-    fs.writeFileSync(filePath, buffer);
+  // Uploads a file buffer directly to the S3 bucket
+  async saveFile(userId: string | number, filename: string, buffer: Buffer): Promise<UploadedFile> {
+    const key = `${this.prefix}/${userId}/${filename}`;
+    
+    await this.s3Client.send(new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: 'application/octet-stream'
+    }));
 
     return {
       fieldname: 'file',
       originalname: filename,
       mimetype: 'application/octet-stream',
       size: buffer.length,
-      path: filePath,
-      // Serve via GET /api/users/files/:userId/:filename
-      url: `/api/users/files/${userId}/${encodeURIComponent(filename)}`,
+      path: key,
+      url: `/api/users/files/${this.prefix}/${userId}/${encodeURIComponent(filename)}`
     };
   }
 
-  /**
-   * Return download info for a stored file.
-   */
-  getFileUrl(userId: string | number, filename: string): DownloadResult {
-    const filePath = path.join(this.baseDir, String(userId), filename);
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`File not found: ${filename}`);
+  // Deletes a file from the S3 bucket
+  async deleteFile(userId: string | number, filename: string): Promise<void> {
+    const key = `${this.prefix}/${userId}/${filename}`;
+    try {
+      await this.s3Client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    } catch (error) {
+      console.error('S3 Delete Error:', error);
     }
-    return {
-      url: filePath,       // actual disk path — served by express.static or stream
-      isRedirect: false,
-    };
   }
 
-  deleteFile(userId: string | number, filename: string): void {
-    const filePath = path.join(this.baseDir, String(userId), filename);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  // Fetches a file from S3 as a buffer
+  async getFileBuffer(userId: string | number, filename: string): Promise<Buffer> {
+    const key = `${this.prefix}/${userId}/${filename}`;
+    const response = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    
+    if (!response.Body) throw new Error(`File not found in S3: ${key}`);
+    
+    const stream = response.Body as Readable;
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      stream.on('data', chunk => chunks.push(Buffer.from(chunk)));
+      stream.on('error', err => reject(err));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+    });
   }
 
-  listFiles(userId: string | number): string[] {
-    const dir = path.join(this.baseDir, String(userId));
-    if (!fs.existsSync(dir)) return [];
-    return fs.readdirSync(dir);
+  // Fetches a file from S3 as a stream (for fast downloads)
+  async getFileStream(userId: string | number, filename: string): Promise<Readable> {
+    const key = `${this.prefix}/${userId}/${filename}`;
+    const response = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    return response.Body as Readable;
   }
 }
 
 // ─── Storage Service Facade ────────────────────────────────────────────────────
 
 class StorageService {
-  readonly resumes: LocalStorageProvider;
-  readonly screenshots: LocalStorageProvider;
+  readonly resumes: S3Provider;
+  readonly screenshots: S3Provider;
 
   constructor() {
-    const cwd = process.cwd();
-    this.resumes = new LocalStorageProvider(path.join(cwd, 'uploads', 'resumes'));
-    this.screenshots = new LocalStorageProvider(path.join(cwd, 'uploads', 'screenshots'));
+    this.resumes = new S3Provider('resumes');
+    this.screenshots = new S3Provider('screenshots');
   }
 
-  /**
-   * Get the base upload directory path for use with multer diskStorage.
-   * Keeps multer configuration compatible with storageService.
-   */
-  getResumeDir(userId: string | number): string {
-    return this.resumes.getUserDir(userId);
-  }
-
-  getScreenshotDir(userId: string | number): string {
-    return this.screenshots.getUserDir(userId);
-  }
-
-  /**
-   * Derive the public URL for a resume file.
-   * When switching to S3, this returns a presigned URL instead.
-   */
   getResumeUrl(userId: string | number, filename: string): string {
     return `/api/users/files/resumes/${userId}/${encodeURIComponent(filename)}`;
   }
@@ -134,34 +109,21 @@ class StorageService {
     return `/api/users/files/screenshots/${userId}/${encodeURIComponent(filename)}`;
   }
 
-  /**
-   * Read a resume file buffer from disk.
-   * When switching to S3, this calls S3 GetObject instead.
-   */
-  readResumeBuffer(userId: string | number, filename: string): Buffer {
-    const filePath = path.join(this.resumes.getUserDir(userId), filename);
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`Resume file not found: ${filename}`);
-    }
-    return fs.readFileSync(filePath);
+  async readResumeBuffer(userId: string | number, filename: string): Promise<Buffer> {
+    return this.resumes.getFileBuffer(userId, filename);
   }
 
-  readResumeAsStream(userId: string | number, filename: string): fs.ReadStream {
-    const filePath = path.join(process.cwd(), 'uploads', 'resumes', String(userId), filename);
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`File not found: ${filename}`);
-    }
-    return fs.createReadStream(filePath);
+  async readResumeAsStream(userId: string | number, filename: string): Promise<Readable> {
+    return this.resumes.getFileStream(userId, filename);
   }
 
-  deleteResume(userId: string | number, filename: string): void {
-    this.resumes.deleteFile(userId, filename);
+  async deleteResume(userId: string | number, filename: string): Promise<void> {
+    return this.resumes.deleteFile(userId, filename);
   }
 
-  deleteScreenshot(userId: string | number, filename: string): void {
-    this.screenshots.deleteFile(userId, filename);
+  async deleteScreenshot(userId: string | number, filename: string): Promise<void> {
+    return this.screenshots.deleteFile(userId, filename);
   }
 }
 
-// Singleton — import this across all route files
 export const storageService = new StorageService();
