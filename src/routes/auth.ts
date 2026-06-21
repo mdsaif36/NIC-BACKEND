@@ -1,6 +1,8 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import { User } from '../models/User.js';
 import { authenticate, AuthRequest, JWT_SECRET } from '../middleware/auth.js';
 
@@ -402,6 +404,104 @@ router.post('/github', async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({ message: 'Server error during GitHub auth.', error: error.message });
+  }
+});
+
+// Forgot Password Endpoint
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    // A. Check if the user exists in database
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      // For security, return success even if user not found, so users can't scan registered emails
+      return res.status(200).json({ message: "If this email exists, a reset link was sent." });
+    }
+
+    // B. Generate a random 32-character security token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    // Set expiry to 15 minutes from now
+    const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); 
+
+    // C. Save the token and expiry into the DB
+    user.resetToken = resetToken;
+    user.resetTokenExpiry = resetTokenExpiry;
+    await user.save();
+
+    // D. Set up the Gmail sender using environment variables
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_PASS;
+
+    if (!emailUser || !emailPass) {
+      console.warn("EMAIL_USER or EMAIL_PASS environment variables are not set. Cannot send password reset email.");
+      return res.status(500).json({ message: "Email service configuration error." });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+
+    // E. Send the email
+    const resetLink = `https://nic-frontend-beta.vercel.app/reset-password?token=${resetToken}`;
+    
+    await transporter.sendMail({
+      from: `"NextInCampus" <${emailUser}>`,
+      to: email,
+      subject: 'Password Reset Request',
+      html: `
+        <h2>Password Reset</h2>
+        <p>You requested to reset your password. Click the link below to create a new one. This link will expire in 15 minutes.</p>
+        <a href="${resetLink}" style="padding: 10px 20px; background-color: #10B981; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
+        <p>If you did not request this, please ignore this email.</p>
+      `,
+    });
+
+    res.status(200).json({ message: "Password reset link sent to email." });
+  } catch (error: any) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ message: "Error sending email.", error: error.message });
+  }
+});
+
+// Reset Password Endpoint
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: "Token and new password are required." });
+    }
+
+    // A. Find the user with this token
+    const user = await User.findOne({ where: { resetToken: token } });
+
+    // B. Check token expiry
+    if (!user || !user.resetTokenExpiry || new Date(user.resetTokenExpiry).getTime() < Date.now()) {
+      return res.status(400).json({ message: "Token is invalid or has expired." });
+    }
+
+    // C. Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // D. Update the password in DB and delete the used token
+    user.password = hashedPassword;
+    user.resetToken = undefined;
+    user.resetTokenExpiry = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Password has been successfully reset!" });
+  } catch (error: any) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Error resetting password.", error: error.message });
   }
 });
 

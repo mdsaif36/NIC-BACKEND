@@ -53,6 +53,8 @@ export class User extends Model {
   declare hideLinkedIn: boolean;
   declare hideCompanyEmail: boolean;
   declare careerIntelligence?: any;
+  declare resetToken?: string;
+  declare resetTokenExpiry?: Date;
 }
 
 User.init(
@@ -335,6 +337,14 @@ User.init(
       set(val: any) {
         this.setDataValue('careerIntelligence', val ? JSON.stringify(val) : null);
       },
+    },
+    resetToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    resetTokenExpiry: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
     trustScore: {
       type: DataTypes.VIRTUAL,
