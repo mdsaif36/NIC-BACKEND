@@ -7,7 +7,11 @@ import { User } from '../models/User.js';
 import { authenticate, AuthRequest, JWT_SECRET } from '../middleware/auth.js';
 
 const router = Router();
-const resend = new Resend(process.env.RESEND_API_KEY);
+
+if (!process.env.RESEND_API_KEY) {
+  console.warn("⚠️ RESEND_API_KEY is not defined. Password reset emails will fail to send.");
+}
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
 
 // Sign Up Route
 router.post('/signup', async (req, res) => {

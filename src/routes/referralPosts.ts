@@ -7,7 +7,8 @@ import { Op } from 'sequelize';
 const router = Router();
 
 // ─── GET all active referral posts (public feed for seekers) ───────────────
-router.get('/', authenticate as any, async (req: AuthRequest, res: Response) => {
+// ─── GET all active referral posts (public feed for seekers) ───────────────
+const getAllActivePosts = async (req: AuthRequest, res: Response) => {
   try {
     const { search, company, domain, jobType, location } = req.query;
 
@@ -41,11 +42,24 @@ router.get('/', authenticate as any, async (req: AuthRequest, res: Response) => 
     // Increment view counts (fire-and-forget)
     ReferralPost.increment('viewCount', { where, by: 1 }).catch(() => {});
 
-    res.json(posts);
+    // Map to append flat attributes for compatibility
+    const result = posts.map(post => {
+      const json = post.toJSON() as any;
+      if (json.alumni) {
+        json.alumniName = json.alumni.name;
+        json.alumniCompany = json.alumni.company;
+      }
+      return json;
+    });
+
+    res.json(result);
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching referral posts', error: error.message });
   }
-});
+};
+
+router.get('/', authenticate as any, getAllActivePosts as any);
+router.get('/all', authenticate as any, getAllActivePosts as any);
 
 // ─── GET trending/stats for news ticker ───────────────────────────────────
 router.get('/stats', authenticate as any, async (_req: AuthRequest, res: Response) => {
@@ -82,7 +96,7 @@ router.get('/stats', authenticate as any, async (_req: AuthRequest, res: Respons
 });
 
 // ─── POST — alumni creates a referral post ────────────────────────────────
-router.post('/', authenticate as any, async (req: AuthRequest, res: Response) => {
+const createActivePost = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user;
     if (!user || user.role !== 'alumni') {
@@ -115,7 +129,10 @@ router.post('/', authenticate as any, async (req: AuthRequest, res: Response) =>
   } catch (error: any) {
     res.status(500).json({ message: 'Error creating referral post', error: error.message });
   }
-});
+};
+
+router.post('/', authenticate as any, createActivePost as any);
+router.post('/create', authenticate as any, createActivePost as any);
 
 // ─── PUT — alumni updates or closes their post ────────────────────────────
 router.put('/:id', authenticate as any, async (req: AuthRequest, res: Response) => {
