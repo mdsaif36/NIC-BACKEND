@@ -2,11 +2,12 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { User } from '../models/User.js';
 import { authenticate, AuthRequest, JWT_SECRET } from '../middleware/auth.js';
 
 const router = Router();
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Sign Up Route
 router.post('/signup', async (req, res) => {
@@ -433,39 +434,21 @@ router.post('/forgot-password', async (req, res) => {
     user.resetTokenExpiry = resetTokenExpiry;
     await user.save();
 
-    // D. Set up the Gmail sender using environment variables
-    const emailUser = process.env.EMAIL_USER;
-    const emailPass = process.env.EMAIL_PASS;
-
-    if (!emailUser || !emailPass) {
-      console.warn("EMAIL_USER or EMAIL_PASS environment variables are not set. Cannot send password reset email.");
-      return res.status(500).json({ message: "Email service configuration error." });
-    }
-
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user: emailUser,
-        pass: emailPass,
-      },
-    });
-
-    // E. Send the email
+    // D. Send the email using Resend
     const resetLink = `https://nic-frontend-beta.vercel.app/reset-password?token=${resetToken}`;
-    
-    await transporter.sendMail({
-      from: `"NextInCampus" <${emailUser}>`,
-      to: email,
+
+    // FIRE AND FORGET USING RESEND
+    resend.emails.send({
+      from: 'NextInCampus <onboarding@resend.dev>', // Resend gives you this free testing email!
+      to: email, // IMPORTANT: While testing on the free tier, this MUST be the email you used to sign up for Resend!
       subject: 'Password Reset Request',
       html: `
         <h2>Password Reset</h2>
         <p>You requested to reset your password. Click the link below to create a new one. This link will expire in 15 minutes.</p>
         <a href="${resetLink}" style="padding: 10px 20px; background-color: #10B981; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
         <p>If you did not request this, please ignore this email.</p>
-      `,
-    });
+      `
+    }).catch(err => console.error("Resend error:", err));
 
     res.status(200).json({ message: "Password reset link sent to email." });
   } catch (error: any) {
