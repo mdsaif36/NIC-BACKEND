@@ -88,6 +88,7 @@ app.use(express.json());
 // When switching to S3, remove these lines and serve presigned URLs instead.
 app.use('/api/users/files/resumes', express.static(path.join(process.cwd(), 'uploads', 'resumes')));
 app.use('/api/users/files/screenshots', express.static(path.join(process.cwd(), 'uploads', 'screenshots')));
+app.use('/api/referrals/files', express.static(path.join(process.cwd(), 'uploads', 'referrals')));
 
 // ─── Swagger API Docs ─────────────────────────────────────────────────────────
 // Available at: http://localhost:5000/api-docs

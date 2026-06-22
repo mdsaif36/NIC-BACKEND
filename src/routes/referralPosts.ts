@@ -3,8 +3,37 @@ import { ReferralPost } from '../models/ReferralPost.js';
 import { User } from '../models/User.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { Op } from 'sequelize';
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
+
+const referralUploadDir = path.join(process.cwd(), 'uploads', 'referrals');
+if (!fs.existsSync(referralUploadDir)) {
+  fs.mkdirSync(referralUploadDir, { recursive: true });
+}
+
+const referralStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, referralUploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
+
+const referralUpload = multer({
+  storage: referralStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.pdf' && ext !== '.docx' && ext !== '.doc') {
+      return cb(new Error('Only PDF, DOCX, and DOC documents are allowed.'));
+    }
+    cb(null, true);
+  }
+});
 
 // ─── GET all active referral posts (public feed for seekers) ───────────────
 // ─── GET all active referral posts (public feed for seekers) ───────────────
@@ -109,6 +138,25 @@ const createActivePost = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Company and role are required.' });
     }
 
+    let skillsArray: string[] = [];
+    if (skills) {
+      if (Array.isArray(skills)) {
+        skillsArray = skills;
+      } else if (typeof skills === 'string') {
+        try {
+          if (skills.startsWith('[') && skills.endsWith(']')) {
+            skillsArray = JSON.parse(skills);
+          } else {
+            skillsArray = skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+          }
+        } catch {
+          skillsArray = skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+        }
+      }
+    }
+
+    const parsedSlots = slots ? parseInt(slots as string, 10) : 1;
+
     const post = await ReferralPost.create({
       alumniId: user.id,
       company: company || user.company || 'My Company',
@@ -116,13 +164,14 @@ const createActivePost = async (req: AuthRequest, res: Response) => {
       location: location || 'Remote',
       jobType: jobType || 'Full-time',
       domain: domain || 'Engineering',
-      skills: skills || [],
+      skills: skillsArray,
       description: description || '',
       deadline: deadline || '',
-      slots: slots || 1,
+      slots: isNaN(parsedSlots) ? 1 : parsedSlots,
       isActive: true,
       viewCount: 0,
       applyCount: 0,
+      jdFileName: req.file ? req.file.filename : undefined,
     });
 
     res.status(201).json(post);
@@ -131,11 +180,11 @@ const createActivePost = async (req: AuthRequest, res: Response) => {
   }
 };
 
-router.post('/', authenticate as any, createActivePost as any);
-router.post('/create', authenticate as any, createActivePost as any);
+router.post('/', authenticate as any, referralUpload.single('pdf') as any, createActivePost as any);
+router.post('/create', authenticate as any, referralUpload.single('pdf') as any, createActivePost as any);
 
 // ─── PUT — alumni updates or closes their post ────────────────────────────
-router.put('/:id', authenticate as any, async (req: AuthRequest, res: Response) => {
+router.put('/:id', authenticate as any, referralUpload.single('pdf') as any, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user;
     const post = await ReferralPost.findByPk(req.params.id);
@@ -143,7 +192,38 @@ router.put('/:id', authenticate as any, async (req: AuthRequest, res: Response) 
     if (!post) return res.status(404).json({ message: 'Post not found.' });
     if (post.alumniId !== user!.id) return res.status(403).json({ message: 'Unauthorized.' });
 
-    await post.update(req.body);
+    const updateData = { ...req.body };
+    if (req.file) {
+      updateData.jdFileName = req.file.filename;
+    }
+
+    if (updateData.skills) {
+      if (typeof updateData.skills === 'string') {
+        try {
+          if (updateData.skills.startsWith('[') && updateData.skills.endsWith(']')) {
+            updateData.skills = JSON.parse(updateData.skills);
+          } else {
+            updateData.skills = updateData.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+          }
+        } catch {
+          updateData.skills = updateData.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+        }
+      }
+    }
+
+    if (updateData.slots) {
+      const parsedSlots = parseInt(updateData.slots as string, 10);
+      if (!isNaN(parsedSlots)) {
+        updateData.slots = parsedSlots;
+      }
+    }
+
+    if (updateData.isActive !== undefined) {
+      if (updateData.isActive === 'true') updateData.isActive = true;
+      if (updateData.isActive === 'false') updateData.isActive = false;
+    }
+
+    await post.update(updateData);
     res.json(post);
   } catch (error: any) {
     res.status(500).json({ message: 'Error updating post', error: error.message });
@@ -159,8 +239,8 @@ router.delete('/:id', authenticate as any, async (req: AuthRequest, res: Respons
     if (!post) return res.status(404).json({ message: 'Post not found.' });
     if (post.alumniId !== user!.id) return res.status(403).json({ message: 'Unauthorized.' });
 
-    await post.update({ isActive: false });
-    res.json({ message: 'Post closed.' });
+    await post.destroy();
+    res.json({ message: 'Post deleted successfully.' });
   } catch (error: any) {
     res.status(500).json({ message: 'Error deleting post', error: error.message });
   }

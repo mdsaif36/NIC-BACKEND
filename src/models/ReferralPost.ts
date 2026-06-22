@@ -17,6 +17,7 @@ export class ReferralPost extends Model {
   declare isActive: boolean;
   declare viewCount: number;
   declare applyCount: number;
+  declare jdFileName?: string;
 }
 
 ReferralPost.init(
@@ -94,6 +95,10 @@ ReferralPost.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+    },
+    jdFileName: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {
