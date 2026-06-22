@@ -248,6 +248,22 @@ router.post('/:id/apply', authenticate as any, async (req: AuthRequest, res: Res
     const post = await ReferralPost.findByPk(req.params.id);
     if (!post) return res.status(404).json({ message: 'Post not found.' });
 
+    // Validate slots limit
+    if (post.applyCount >= post.slots) {
+      return res.status(400).json({ message: 'This referral slot is full.' });
+    }
+
+    // Validate expiration
+    if (post.deadline) {
+      const d = new Date(post.deadline);
+      const now = new Date();
+      // Calculate remaining days
+      const days = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (days < 0) {
+        return res.status(400).json({ message: 'This referral post has expired.' });
+      }
+    }
+
     await post.increment('applyCount');
     res.json({ message: 'Interest recorded.' });
   } catch (error: any) {
