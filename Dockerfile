@@ -25,10 +25,11 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 
 # Create uploads directories (bind-mounted in production)
-RUN mkdir -p uploads/resumes uploads/screenshots
+RUN mkdir -p uploads/resumes uploads/screenshots uploads/referrals
 
 # Non-root user for security
 RUN addgroup -S nic && adduser -S nic -G nic
+RUN chown -R nic:nic /app/uploads
 USER nic
 
 EXPOSE 5000

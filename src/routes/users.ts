@@ -11,15 +11,7 @@ import sequelize from '../config/db.js';
 import { extractTextFromPdf, parseProfileWithLLM, generateCareerIntelligence } from '../utils/aiParser.js';
 import { calculateMatch } from '../utils/aiRecommender.js';
 
-const isProd = process.env.NODE_ENV === 'production';
-const uploadDir = isProd
-  ? '/tmp/uploads/resumes'
-  : path.join(process.cwd(), 'uploads', 'resumes');
-
-// Ensure upload directory exists
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const uploadDir = path.join(process.cwd(), 'uploads', 'resumes');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -47,13 +39,7 @@ const upload = multer({
   }
 });
 
-const screenshotUploadDir = isProd
-  ? '/tmp/uploads/screenshots'
-  : path.join(process.cwd(), 'uploads', 'screenshots');
-
-if (!fs.existsSync(screenshotUploadDir)) {
-  fs.mkdirSync(screenshotUploadDir, { recursive: true });
-}
+const screenshotUploadDir = path.join(process.cwd(), 'uploads', 'screenshots');
 
 const screenshotStorage = multer.diskStorage({
   destination: (req, file, cb) => {

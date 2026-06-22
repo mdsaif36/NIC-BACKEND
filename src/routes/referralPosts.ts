@@ -4,19 +4,11 @@ import { User } from '../models/User.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { Op } from 'sequelize';
 import multer from 'multer';
-import fs from 'fs';
 import path from 'path';
 
 const router = Router();
 
-const isProd = process.env.NODE_ENV === 'production';
-const referralUploadDir = isProd
-  ? '/tmp/uploads/referrals'
-  : path.join(process.cwd(), 'uploads', 'referrals');
-
-if (!fs.existsSync(referralUploadDir)) {
-  fs.mkdirSync(referralUploadDir, { recursive: true });
-}
+const referralUploadDir = path.join(process.cwd(), 'uploads', 'referrals');
 
 const referralStorage = multer.diskStorage({
   destination: (req, file, cb) => {
