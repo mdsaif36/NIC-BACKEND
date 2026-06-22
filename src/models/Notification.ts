@@ -27,7 +27,8 @@ export type NotificationType =
   | 'meeting_scheduled'
   | 'credit_reset'
   | 'system'
-  | 'referral_rated';
+  | 'referral_rated'
+  | 'new_referral';
 
 export class Notification extends Model {
   declare id: number;

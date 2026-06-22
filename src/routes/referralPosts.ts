@@ -5,6 +5,7 @@ import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { Op } from 'sequelize';
 import multer from 'multer';
 import path from 'path';
+import { notifyMany } from '../utils/notificationService.js';
 
 const router = Router();
 
@@ -169,6 +170,22 @@ const createActivePost = async (req: AuthRequest, res: Response) => {
       applyCount: 0,
       jdFileName: req.file ? req.file.filename : undefined,
     });
+
+    // Notify all seekers in real-time and persist to DB
+    User.findAll({ where: { role: 'seeker' } })
+      .then(seekers => {
+        const seekerIds = seekers.map(s => s.id);
+        if (seekerIds.length > 0) {
+          notifyMany(req.app, seekerIds, {
+            type: 'new_referral',
+            title: '💼 New Referral Available',
+            message: `${user.name} just posted a new referral slot for ${role} at ${company}!`,
+            actionUrl: '?tab=referral_board',
+            metadata: { postId: post.id, company, role, domain }
+          }).catch(err => console.error('Error in notifyMany for new referral:', err));
+        }
+      })
+      .catch(err => console.error('Error fetching seekers for new referral notification:', err));
 
     res.status(201).json(post);
   } catch (error: any) {
