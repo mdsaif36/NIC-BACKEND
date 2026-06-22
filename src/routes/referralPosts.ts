@@ -9,7 +9,11 @@ import path from 'path';
 
 const router = Router();
 
-const referralUploadDir = path.join(process.cwd(), 'uploads', 'referrals');
+const isProd = process.env.NODE_ENV === 'production';
+const referralUploadDir = isProd
+  ? '/tmp/uploads/referrals'
+  : path.join(process.cwd(), 'uploads', 'referrals');
+
 if (!fs.existsSync(referralUploadDir)) {
   fs.mkdirSync(referralUploadDir, { recursive: true });
 }

@@ -11,7 +11,10 @@ import sequelize from '../config/db.js';
 import { extractTextFromPdf, parseProfileWithLLM, generateCareerIntelligence } from '../utils/aiParser.js';
 import { calculateMatch } from '../utils/aiRecommender.js';
 
-const uploadDir = path.join(process.cwd(), 'uploads', 'resumes');
+const isProd = process.env.NODE_ENV === 'production';
+const uploadDir = isProd
+  ? '/tmp/uploads/resumes'
+  : path.join(process.cwd(), 'uploads', 'resumes');
 
 // Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
@@ -44,7 +47,9 @@ const upload = multer({
   }
 });
 
-const screenshotUploadDir = path.join(process.cwd(), 'uploads', 'screenshots');
+const screenshotUploadDir = isProd
+  ? '/tmp/uploads/screenshots'
+  : path.join(process.cwd(), 'uploads', 'screenshots');
 
 if (!fs.existsSync(screenshotUploadDir)) {
   fs.mkdirSync(screenshotUploadDir, { recursive: true });

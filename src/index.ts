@@ -86,9 +86,13 @@ app.use(express.json());
 // ─── Static File Serving ──────────────────────────────────────────────────────
 // Serve uploaded files (resumes, screenshots) through the API.
 // When switching to S3, remove these lines and serve presigned URLs instead.
-app.use('/api/users/files/resumes', express.static(path.join(process.cwd(), 'uploads', 'resumes')));
-app.use('/api/users/files/screenshots', express.static(path.join(process.cwd(), 'uploads', 'screenshots')));
-app.use('/api/referrals/files', express.static(path.join(process.cwd(), 'uploads', 'referrals')));
+const resumesDir = isProd ? '/tmp/uploads/resumes' : path.join(process.cwd(), 'uploads', 'resumes');
+const screenshotsDir = isProd ? '/tmp/uploads/screenshots' : path.join(process.cwd(), 'uploads', 'screenshots');
+const referralsDir = isProd ? '/tmp/uploads/referrals' : path.join(process.cwd(), 'uploads', 'referrals');
+
+app.use('/api/users/files/resumes', express.static(resumesDir));
+app.use('/api/users/files/screenshots', express.static(screenshotsDir));
+app.use('/api/referrals/files', express.static(referralsDir));
 
 // ─── Swagger API Docs ─────────────────────────────────────────────────────────
 // Available at: http://localhost:5000/api-docs
