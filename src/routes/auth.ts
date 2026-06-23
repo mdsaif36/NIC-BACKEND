@@ -22,10 +22,15 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ message: 'All fields are required.' });
     }
 
+    const safeEmail = email.trim().toLowerCase();
+
     // Check if user already exists
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ where: { email: safeEmail } });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered.' });
+      return res.status(400).json({ 
+        message: 'An account with this email already exists. Please log in.',
+        error: 'An account with this email already exists. Please log in.' 
+      });
     }
 
     // Hash password
@@ -40,7 +45,7 @@ router.post('/signup', async (req, res) => {
 
     // Create User
     const user = await User.create({
-      email,
+      email: safeEmail,
       password: hashedPassword,
       role,
       name,
@@ -93,7 +98,9 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email, password, and role are required.' });
     }
 
-    const user = await User.findOne({ where: { email } });
+    const safeEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({ where: { email: safeEmail } });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials.' });
     }
@@ -193,8 +200,10 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const safeEmail = email.trim().toLowerCase();
+
     // Check if user exists
-    let user = await User.findOne({ where: { email } });
+    let user = await User.findOne({ where: { email: safeEmail } });
 
     if (user) {
       // Role verification
@@ -215,7 +224,7 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
       const successRate = role === 'alumni' ? '0 referred' : undefined;
 
       user = await User.create({
-        email,
+        email: safeEmail,
         role,
         name,
         college: college || 'University Network',
@@ -348,8 +357,10 @@ router.post('/github', async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const safeEmail = email.trim().toLowerCase();
+
     // Check if user exists
-    let user = await User.findOne({ where: { email } });
+    let user = await User.findOne({ where: { email: safeEmail } });
 
     if (user) {
       // Role verification
@@ -370,7 +381,7 @@ router.post('/github', async (req: AuthRequest, res: Response) => {
       const successRate = role === 'alumni' ? '0 referred' : undefined;
 
       user = await User.create({
-        email,
+        email: safeEmail,
         role,
         name,
         college: college || 'University Network',
@@ -421,8 +432,10 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ message: "Email is required." });
     }
 
+    const safeEmail = email.trim().toLowerCase();
+
     // A. Check if the user exists in database
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { email: safeEmail } });
     if (!user) {
       // For security, return success even if user not found, so users can't scan registered emails
       return res.status(200).json({ message: "If this email exists, a reset link was sent." });
