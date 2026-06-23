@@ -33,11 +33,32 @@ const server = http.createServer(app);
 
 // ─── CORS & Socket.IO ──────────────────────────────────────────────────────────
 const clientOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+const allowedOrigins = [
+  clientOrigin,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://localhost:80',
+  'http://localhost:5175',
+];
+
+const checkOrigin = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  if (!origin) return callback(null, true);
+  if (
+    allowedOrigins.includes(origin) ||
+    /^http:\/\/localhost:\d+$/.test(origin) ||
+    /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
+  ) {
+    return callback(null, true);
+  }
+  return callback(new Error('Not allowed by CORS'));
+};
 
 const io = new Server(server, {
   cors: {
-    origin: clientOrigin,
+    origin: checkOrigin as any,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
   },
 });
 
@@ -75,7 +96,7 @@ app.use(globalLimiter);
 // ─── CORS + Body Parser ───────────────────────────────────────────────────────
 app.use(
   cors({
-    origin: clientOrigin,
+    origin: checkOrigin as any,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   })
