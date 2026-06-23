@@ -224,7 +224,7 @@ router.post('/schedule', authenticate as any, async (req: AuthRequest, res: Resp
       return res.status(400).json({ message: 'Receiver, date, and time are required.' });
     }
 
-    const scheduledText = `📅 Scheduled a call for ${date} at ${time}. (Video Call Room Ready)`;
+    const scheduledText = `📅 Scheduled a meeting for ${date} at ${time}.`;
 
     const message = await Message.create({
       senderId: sender.id,
@@ -238,7 +238,7 @@ router.post('/schedule', authenticate as any, async (req: AuthRequest, res: Resp
       userId: receiverId,
       type: 'meeting_scheduled',
       title: '📅 Meeting Scheduled',
-      message: `${sender.name} has scheduled a call for ${date} at ${time}.`,
+      message: `${sender.name} has scheduled a meeting for ${date} at ${time}.`,
       actionUrl: '?tab=messages',
       metadata: { senderId: sender.id, senderName: sender.name, date, time },
     });
@@ -254,7 +254,7 @@ router.post('/schedule', authenticate as any, async (req: AuthRequest, res: Resp
 
     res.status(201).json(message);
   } catch (error: any) {
-    res.status(500).json({ message: 'Error scheduling call.', error: error.message });
+    res.status(500).json({ message: 'Error scheduling meeting.', error: error.message });
   }
 });
 
