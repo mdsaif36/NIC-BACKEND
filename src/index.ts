@@ -18,12 +18,14 @@ import requestRoutes from './routes/requests.js';
 import messageRoutes from './routes/messages.js';
 import referralPostRoutes from './routes/referralPosts.js';
 import notificationRoutes from './routes/notifications.js';
+import applicationRoutes from './routes/applications.js';
 
 // Model imports (register associations)
 import './models/UserActivity.js';
 import './models/ReferralPost.js';
 import './models/AuditLog.js';
 import './models/Notification.js';
+import './models/Application.js';
 
 dotenv.config();
 
@@ -150,6 +152,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/referral-posts', referralPostRoutes);
 app.use('/api/referrals', referralPostRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/applications', applicationRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
