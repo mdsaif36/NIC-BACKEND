@@ -348,6 +348,24 @@ router.post('/resume/upload', authenticate as any, upload.single('resume'), asyn
   }
 });
 
+// Refill Seeker Referral Credits Route
+router.post('/refill-credits', authenticate as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== 'seeker') {
+      return res.status(403).json({ message: 'Only seekers can refill referral credits.' });
+    }
+    user.referralCreditsRemaining = 10;
+    await user.save();
+    res.json({
+      message: 'Referral credits successfully refilled to 10!',
+      referralCreditsRemaining: user.referralCreditsRemaining
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error refilling credits.', error: error.message });
+  }
+});
+
 // Download Seeker Resume Route
 router.get('/resume/download/:userId/:filename', authenticate as any, async (req: AuthRequest, res: Response) => {
   try {
