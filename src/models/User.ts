@@ -249,12 +249,12 @@ User.init(
     monthlyReferralLimit: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 10,
+      defaultValue: 5,
     },
     referralCreditsRemaining: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 10,
+      defaultValue: 5,
     },
     lastCreditReset: {
       type: DataTypes.DATE,

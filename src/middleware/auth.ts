@@ -70,7 +70,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
           (now.getFullYear() === lastReset.getFullYear() && now.getMonth() > lastReset.getMonth());
           
         if (shouldReset) {
-          user.referralCreditsRemaining = user.monthlyReferralLimit || 10;
+          user.referralCreditsRemaining = user.monthlyReferralLimit || 5;
           user.lastCreditReset = now;
           await user.save();
         }

@@ -6,17 +6,17 @@ async function run() {
     await sequelize.authenticate();
     console.log('Connected to database.');
     
-    // Update all users' monthly limit and remaining credits to 10
+    // Update all users' monthly limit and remaining credits to 5
     const [updatedCount] = await User.update(
       {
-        monthlyReferralLimit: 10,
-        referralCreditsRemaining: 10
+        monthlyReferralLimit: 5,
+        referralCreditsRemaining: 5
       },
       {
         where: {}
       }
     );
-    console.log(`Successfully updated ${updatedCount} users in the database to 10 credits.`);
+    console.log(`Successfully updated ${updatedCount} users in the database to 5 credits.`);
   } catch (error: any) {
     console.error('Failed to update credits:', error.message);
   } finally {

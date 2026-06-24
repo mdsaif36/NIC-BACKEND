@@ -329,10 +329,10 @@ router.post('/refill-credits', authenticate as any, async (req: AuthRequest, res
     if (!user || user.role !== 'seeker') {
       return res.status(403).json({ message: 'Only seekers can refill referral credits.' });
     }
-    user.referralCreditsRemaining = 10;
+    user.referralCreditsRemaining = 5;
     await user.save();
     res.json({
-      message: 'Referral credits successfully refilled to 10!',
+      message: 'Referral credits successfully refilled to 5!',
       referralCreditsRemaining: user.referralCreditsRemaining
     });
   } catch (error: any) {
