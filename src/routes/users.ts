@@ -350,12 +350,20 @@ router.get('/resume/download/:userId/:filename', authenticate as any, async (req
       return res.status(400).json({ message: 'Invalid user ID format.' });
     }
 
+    const decodedFilename = decodeURIComponent(filename);
+    if (decodedFilename.startsWith('http://') || decodedFilename.startsWith('https://')) {
+      return res.redirect(decodedFilename);
+    }
+
+    const seeker = await User.findByPk(parsedUserId);
+    if (seeker && seeker.resumeName && (seeker.resumeName.startsWith('http://') || seeker.resumeName.startsWith('https://'))) {
+      return res.redirect(seeker.resumeName);
+    }
+
     const cleanFilename = path.basename(filename);
     const filePath = path.join(uploadDir, String(parsedUserId), cleanFilename);
     
     if (!fs.existsSync(filePath)) {
-      // Find the user to get their name
-      const seeker = await User.findByPk(parsedUserId);
       const seekerName = seeker ? seeker.name : 'Student';
       
       const safeName = seekerName.replace(/[()]/g, '');
@@ -678,6 +686,10 @@ router.get('/verify/screenshot/:userId', authenticate as any, async (req: AuthRe
     const targetUser = await User.findByPk(userId);
     if (!targetUser || !targetUser.employeeScreenshot) {
       return res.status(404).json({ message: 'Screenshot not found.' });
+    }
+
+    if (targetUser.employeeScreenshot.startsWith('http://') || targetUser.employeeScreenshot.startsWith('https://')) {
+      return res.redirect(targetUser.employeeScreenshot);
     }
 
     const filePath = path.join(screenshotUploadDir, String(targetUser.id), targetUser.employeeScreenshot);
