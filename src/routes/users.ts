@@ -381,7 +381,67 @@ router.get('/resume/download/:userId/:filename', authenticate as any, async (req
     const filePath = path.join(uploadDir, String(parsedUserId), cleanFilename);
     
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'Resume file not found.' });
+      // Find the user to get their name
+      const seeker = await User.findByPk(parsedUserId);
+      const seekerName = seeker ? seeker.name : 'Student';
+      
+      const safeName = seekerName.replace(/[()]/g, '');
+      const safeFilename = cleanFilename.replace(/[()]/g, '');
+
+      // Generate a dynamic placeholder PDF
+      const streamBody = [
+        'BT',
+        '/F1 18 Tf',
+        '50 700 Td',
+        '(NextInCampus - Resume Demo Placeholder) Tj',
+        '/F1 11 Tf',
+        '0 -35 Td',
+        `(Student Name: ${safeName}) Tj`,
+        '0 -20 Td',
+        `(Requested File: ${safeFilename}) Tj`,
+        '0 -40 Td',
+        '(Note: The original resume file was not found on this server\'s ephemeral) Tj',
+        '0 -15 Td',
+        '(storage. Render free instances reset their disk contents when restarted.) Tj',
+        '0 -30 Td',
+        '(To view a custom resume, please log in as this seeker and re-upload) Tj',
+        '0 -15 Td',
+        '(their PDF resume in their Profile Tab.) Tj',
+        'ET'
+      ].join('\n');
+
+      const pdfContent = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> >>
+endobj
+4 0 obj
+<< /Length ${streamBody.length} >>
+stream
+${streamBody}
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000281 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+${350 + streamBody.length}
+%%EOF`;
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="placeholder.pdf"`);
+      return res.send(Buffer.from(pdfContent, 'binary'));
     }
 
     // Set appropriate headers based on extension
