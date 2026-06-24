@@ -254,7 +254,8 @@ router.post('/resume/upload', authenticate as any, upload.single('resume'), asyn
       minute: '2-digit'
     });
 
-    const publicUrl = await storageService.uploadResume(user.id, name, req.file.buffer, req.file.mimetype);
+    const uploaded = await storageService.resumes.saveFile(user.id, name, req.file.buffer);
+    const publicUrl = uploaded.url;
 
     const newItem = {
       id: `res-${Date.now()}`,
@@ -576,7 +577,8 @@ router.post('/verify/manual-upload', authenticate as any, screenshotUpload.singl
       return res.status(400).json({ message: 'No screenshot file uploaded.' });
     }
 
-    const publicUrl = await storageService.uploadScreenshot(user.id, req.file.originalname, req.file.buffer, req.file.mimetype);
+    const uploaded = await storageService.screenshots.saveFile(user.id, req.file.originalname, req.file.buffer);
+    const publicUrl = uploaded.url;
 
     user.employeeScreenshot = publicUrl;
     user.isAdminVerified = false; // Reset to false until approved by admin

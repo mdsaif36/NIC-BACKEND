@@ -146,7 +146,8 @@ const createActivePost = async (req: AuthRequest, res: Response) => {
 
     let jdFileName: string | undefined = undefined;
     if (req.file) {
-      jdFileName = await storageService.uploadReferralJD(user.id, req.file.originalname, req.file.buffer, req.file.mimetype);
+      const uploaded = await storageService.resumes.saveFile(user.id, req.file.originalname, req.file.buffer);
+      jdFileName = uploaded.url;
     }
 
     const post = await ReferralPost.create({
@@ -202,7 +203,8 @@ router.put('/:id', authenticate as any, referralUpload.single('pdf') as any, asy
 
     const updateData = { ...req.body };
     if (req.file) {
-      updateData.jdFileName = await storageService.uploadReferralJD(user!.id, req.file.originalname, req.file.buffer, req.file.mimetype);
+      const uploaded = await storageService.resumes.saveFile(user!.id, req.file.originalname, req.file.buffer);
+      updateData.jdFileName = uploaded.url;
     }
 
     if (updateData.skills) {

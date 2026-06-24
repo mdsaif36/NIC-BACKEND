@@ -57,7 +57,8 @@ router.post('/', authenticate as any, upload.single('resume'), async (req: AuthR
     // Handle custom resume URL if uploaded
     let customResumeUrl: string | undefined = undefined;
     if (req.file) {
-      customResumeUrl = await storageService.uploadResume(seeker.id, req.file.originalname, req.file.buffer, req.file.mimetype);
+      const uploaded = await storageService.resumes.saveFile(seeker.id, req.file.originalname, req.file.buffer);
+      customResumeUrl = uploaded.url;
     }
 
     const application = await Application.create({
