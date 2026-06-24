@@ -50,22 +50,6 @@ router.post('/', authenticate as any, requireSeeker, async (req: AuthRequest, re
       return res.status(404).json({ message: 'Alumni not found.' });
     }
 
-    // 15-day cooling period for the same alumni
-    const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
-    const existingRequest = await ReferralRequest.findOne({
-      where: {
-        seekerId: seeker.id,
-        alumniId,
-        createdAt: { [Op.gt]: fifteenDaysAgo },
-      },
-    });
-
-    if (existingRequest) {
-      return res.status(403).json({
-        message: 'Cannot Request Same Alumni Again within 15 days. Please select another mentor.',
-      });
-    }
-
     // Deduct referral credit
     if (seeker.referralCreditsRemaining > 0) {
       seeker.referralCreditsRemaining -= 1;
