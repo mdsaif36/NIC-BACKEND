@@ -5,3 +5,4 @@ database.sqlite
 .env
 .env.*
 .DS_Store
+uploads/

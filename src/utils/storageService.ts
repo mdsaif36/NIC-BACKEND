@@ -1,129 +1,72 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { Readable } from 'stream';
+import { createClient } from '@supabase/supabase-js';
 
-// ─── Supabase / AWS S3 Storage Provider ────────────────────────────────────────
+const supabaseUrl = process.env.SUPABASE_URL || 'https://your-project.supabase.co';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || 'your-anon-key';
 
-export interface UploadedFile {
-  fieldname: string;
-  originalname: string;
-  mimetype: string;
-  size: number;
-  path: string;
-  url: string;
-}
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
-class S3Provider {
-  private s3Client: S3Client;
-  private bucket: string;
-  private prefix: string;
+export const storageService = {
+  uploadResume: async (userId: string | number, filename: string, buffer: Buffer, mimetype: string): Promise<string> => {
+    const filePath = `${userId}/${Date.now()}-${filename}`;
+    const { data, error } = await supabase.storage
+      .from('resumes')
+      .upload(filePath, buffer, {
+        contentType: mimetype,
+        upsert: true
+      });
+    if (error) throw error;
 
-  constructor(prefix: string) {
-    this.prefix = prefix;
-    this.bucket = process.env.AWS_S3_BUCKET || 'nextincampus-files';
-    
-    // The endpoint is required for Supabase to act like AWS S3
-    const endpoint = process.env.AWS_ENDPOINT;
+    const { data: { publicUrl } } = supabase.storage
+      .from('resumes')
+      .getPublicUrl(filePath);
+    return publicUrl;
+  },
 
-    this.s3Client = new S3Client({
-      region: process.env.AWS_REGION || 'ap-south-1',
-      endpoint: endpoint,
-      forcePathStyle: !!endpoint, // Must be true for Supabase
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-      },
-    });
+  uploadScreenshot: async (userId: string | number, filename: string, buffer: Buffer, mimetype: string): Promise<string> => {
+    const filePath = `${userId}/${Date.now()}-${filename}`;
+    const { data, error } = await supabase.storage
+      .from('screenshots')
+      .upload(filePath, buffer, {
+        contentType: mimetype,
+        upsert: true
+      });
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('screenshots')
+      .getPublicUrl(filePath);
+    return publicUrl;
+  },
+
+  uploadReferralJD: async (alumniId: string | number, filename: string, buffer: Buffer, mimetype: string): Promise<string> => {
+    const filePath = `${alumniId}/${Date.now()}-${filename}`;
+    const { data, error } = await supabase.storage
+      .from('referrals')
+      .upload(filePath, buffer, {
+        contentType: mimetype,
+        upsert: true
+      });
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('referrals')
+      .getPublicUrl(filePath);
+    return publicUrl;
+  },
+
+  deleteResume: async (userId: string | number, filename: string): Promise<void> => {
+    const filePath = filename.startsWith('http') 
+      ? filename.split('/resumes/')[1] 
+      : `${userId}/${filename}`;
+    if (!filePath) return;
+    await supabase.storage.from('resumes').remove([filePath]);
+  },
+
+  deleteScreenshot: async (userId: string | number, filename: string): Promise<void> => {
+    const filePath = filename.startsWith('http')
+      ? filename.split('/screenshots/')[1]
+      : `${userId}/${filename}`;
+    if (!filePath) return;
+    await supabase.storage.from('screenshots').remove([filePath]);
   }
-
-  // Uploads a file buffer directly to the S3 bucket
-  async saveFile(userId: string | number, filename: string, buffer: Buffer): Promise<UploadedFile> {
-    const key = `${this.prefix}/${userId}/${filename}`;
-    
-    await this.s3Client.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      Body: buffer,
-      ContentType: 'application/octet-stream'
-    }));
-
-    return {
-      fieldname: 'file',
-      originalname: filename,
-      mimetype: 'application/octet-stream',
-      size: buffer.length,
-      path: key,
-      url: `/api/users/files/${this.prefix}/${userId}/${encodeURIComponent(filename)}`
-    };
-  }
-
-  // Deletes a file from the S3 bucket
-  async deleteFile(userId: string | number, filename: string): Promise<void> {
-    const key = `${this.prefix}/${userId}/${filename}`;
-    try {
-      await this.s3Client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
-    } catch (error) {
-      console.error('S3 Delete Error:', error);
-    }
-  }
-
-  // Fetches a file from S3 as a buffer
-  async getFileBuffer(userId: string | number, filename: string): Promise<Buffer> {
-    const key = `${this.prefix}/${userId}/${filename}`;
-    const response = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
-    
-    if (!response.Body) throw new Error(`File not found in S3: ${key}`);
-    
-    const stream = response.Body as Readable;
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      stream.on('data', chunk => chunks.push(Buffer.from(chunk)));
-      stream.on('error', err => reject(err));
-      stream.on('end', () => resolve(Buffer.concat(chunks)));
-    });
-  }
-
-  // Fetches a file from S3 as a stream (for fast downloads)
-  async getFileStream(userId: string | number, filename: string): Promise<Readable> {
-    const key = `${this.prefix}/${userId}/${filename}`;
-    const response = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
-    return response.Body as Readable;
-  }
-}
-
-// ─── Storage Service Facade ────────────────────────────────────────────────────
-
-class StorageService {
-  readonly resumes: S3Provider;
-  readonly screenshots: S3Provider;
-
-  constructor() {
-    this.resumes = new S3Provider('resumes');
-    this.screenshots = new S3Provider('screenshots');
-  }
-
-  getResumeUrl(userId: string | number, filename: string): string {
-    return `/api/users/files/resumes/${userId}/${encodeURIComponent(filename)}`;
-  }
-
-  getScreenshotUrl(userId: string | number, filename: string): string {
-    return `/api/users/files/screenshots/${userId}/${encodeURIComponent(filename)}`;
-  }
-
-  async readResumeBuffer(userId: string | number, filename: string): Promise<Buffer> {
-    return this.resumes.getFileBuffer(userId, filename);
-  }
-
-  async readResumeAsStream(userId: string | number, filename: string): Promise<Readable> {
-    return this.resumes.getFileStream(userId, filename);
-  }
-
-  async deleteResume(userId: string | number, filename: string): Promise<void> {
-    return this.resumes.deleteFile(userId, filename);
-  }
-
-  async deleteScreenshot(userId: string | number, filename: string): Promise<void> {
-    return this.screenshots.deleteFile(userId, filename);
-  }
-}
-
-export const storageService = new StorageService();
+};

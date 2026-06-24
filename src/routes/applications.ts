@@ -8,25 +8,12 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 
-const router = Router();
-const uploadDir = path.join(process.cwd(), 'uploads', 'resumes');
+import { storageService } from '../utils/storageService.js';
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const user = (req as any).user;
-    const userDir = path.join(uploadDir, String(user.id));
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
-    }
-    cb(null, userDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
+const router = Router();
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -70,7 +57,7 @@ router.post('/', authenticate as any, upload.single('resume'), async (req: AuthR
     // Handle custom resume URL if uploaded
     let customResumeUrl: string | undefined = undefined;
     if (req.file) {
-      customResumeUrl = `/api/users/files/resumes/${seeker.id}/${req.file.filename}`;
+      customResumeUrl = await storageService.uploadResume(seeker.id, req.file.originalname, req.file.buffer, req.file.mimetype);
     }
 
     const application = await Application.create({

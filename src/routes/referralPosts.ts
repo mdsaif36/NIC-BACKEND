@@ -6,22 +6,12 @@ import { Op } from 'sequelize';
 import multer from 'multer';
 import path from 'path';
 import { notifyMany } from '../utils/notificationService.js';
+import { storageService } from '../utils/storageService.js';
 
 const router = Router();
 
-const referralUploadDir = path.join(process.cwd(), 'uploads', 'referrals');
-
-const referralStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, referralUploadDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
-
 const referralUpload = multer({
-  storage: referralStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -154,6 +144,11 @@ const createActivePost = async (req: AuthRequest, res: Response) => {
 
     const parsedSlots = slots ? parseInt(slots as string, 10) : 1;
 
+    let jdFileName: string | undefined = undefined;
+    if (req.file) {
+      jdFileName = await storageService.uploadReferralJD(user.id, req.file.originalname, req.file.buffer, req.file.mimetype);
+    }
+
     const post = await ReferralPost.create({
       alumniId: user.id,
       company: company || user.company || 'My Company',
@@ -168,7 +163,7 @@ const createActivePost = async (req: AuthRequest, res: Response) => {
       isActive: true,
       viewCount: 0,
       applyCount: 0,
-      jdFileName: req.file ? req.file.filename : undefined,
+      jdFileName,
     });
 
     // Notify all seekers in real-time and persist to DB
@@ -207,7 +202,7 @@ router.put('/:id', authenticate as any, referralUpload.single('pdf') as any, asy
 
     const updateData = { ...req.body };
     if (req.file) {
-      updateData.jdFileName = req.file.filename;
+      updateData.jdFileName = await storageService.uploadReferralJD(user!.id, req.file.originalname, req.file.buffer, req.file.mimetype);
     }
 
     if (updateData.skills) {

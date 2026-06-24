@@ -11,24 +11,13 @@ import sequelize from '../config/db.js';
 import { extractTextFromPdf, parseProfileWithLLM, generateCareerIntelligence } from '../utils/aiParser.js';
 import { calculateMatch } from '../utils/aiRecommender.js';
 
-const uploadDir = path.join(process.cwd(), 'uploads', 'resumes');
+import { storageService } from '../utils/storageService.js';
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const user = (req as any).user;
-    const userDir = path.join(uploadDir, String(user.id));
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
-    }
-    cb(null, userDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  }
-});
+const uploadDir = path.join(process.cwd(), 'uploads', 'resumes');
+const screenshotUploadDir = path.join(process.cwd(), 'uploads', 'screenshots');
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -39,25 +28,8 @@ const upload = multer({
   }
 });
 
-const screenshotUploadDir = path.join(process.cwd(), 'uploads', 'screenshots');
-
-const screenshotStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const user = (req as any).user;
-    const userDir = path.join(screenshotUploadDir, String(user.id));
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
-    }
-    cb(null, userDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `screenshot_${Date.now()}${ext}`);
-  }
-});
-
 const screenshotUpload = multer({
-  storage: screenshotStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -282,9 +254,11 @@ router.post('/resume/upload', authenticate as any, upload.single('resume'), asyn
       minute: '2-digit'
     });
 
+    const publicUrl = await storageService.uploadResume(user.id, name, req.file.buffer, req.file.mimetype);
+
     const newItem = {
       id: `res-${Date.now()}`,
-      name,
+      name: publicUrl,
       size: sizeStr,
       uploadedAt: timeStr
     };
@@ -292,17 +266,16 @@ router.post('/resume/upload', authenticate as any, upload.single('resume'), asyn
     // Load existing history and update
     let history = user.resumesHistory || [];
     // Filter out duplicate by name
-    history = [newItem, ...history.filter((item: any) => item.name !== name)];
+    history = [newItem, ...history.filter((item: any) => item.name !== publicUrl)];
     user.resumesHistory = history;
-    user.resumeName = name;
+    user.resumeName = publicUrl;
     user.resumeUploaded = true;
 
     // AI Resume Parsing & Profile Extraction
     const ext = path.extname(name).toLowerCase();
     if (ext === '.pdf') {
       try {
-        const filePath = path.join(uploadDir, String(user.id), name);
-        const buffer = fs.readFileSync(filePath);
+        const buffer = req.file.buffer;
         const extractedText = await extractTextFromPdf(buffer);
         const parsedProfile = await parseProfileWithLLM(extractedText);
         
@@ -595,7 +568,9 @@ router.post('/verify/manual-upload', authenticate as any, screenshotUpload.singl
       return res.status(400).json({ message: 'No screenshot file uploaded.' });
     }
 
-    user.employeeScreenshot = req.file.filename;
+    const publicUrl = await storageService.uploadScreenshot(user.id, req.file.originalname, req.file.buffer, req.file.mimetype);
+
+    user.employeeScreenshot = publicUrl;
     user.isAdminVerified = false; // Reset to false until approved by admin
     await user.save();
 
