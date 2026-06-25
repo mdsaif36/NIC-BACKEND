@@ -42,6 +42,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:80',
   'http://localhost:5175',
+  'https://nextincampus.in',
+  'https://www.nextincampus.in',
 ];
 
 const checkOrigin = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
