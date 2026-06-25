@@ -170,7 +170,7 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
     let name: string;
     let googleId: string;
 
-    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
 
     // Local Testing / Developer Fallback Mode
     if (token === 'mock-google-token' || !googleClientId) {
@@ -279,8 +279,8 @@ router.post('/github', async (req: AuthRequest, res: Response) => {
     let name: string;
     let githubId: string;
 
-    const githubClientId = process.env.GITHUB_CLIENT_ID;
-    const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
+    const githubClientId = process.env.GITHUB_CLIENT_ID || process.env.VITE_GITHUB_CLIENT_ID;
+    const githubClientSecret = process.env.GITHUB_CLIENT_SECRET || process.env.VITE_GITHUB_CLIENT_SECRET;
 
     // Local Testing / Developer Fallback Mode
     if (code === 'mock-github-code' || !githubClientId || !githubClientSecret) {
