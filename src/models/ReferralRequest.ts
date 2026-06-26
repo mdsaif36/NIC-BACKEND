@@ -7,6 +7,7 @@ export class ReferralRequest extends Model {
   declare seekerId: number;
   declare alumniId: number;
   declare targetRole: string;
+  declare location: string;
   declare timeline: string;
   declare pitchMessage: string;
   declare status: 'pending' | 'accepted' | 'declined' | 'hired' | 'referred' | 'info';
@@ -40,6 +41,11 @@ ReferralRequest.init(
     targetRole: {
       type: DataTypes.STRING,
       allowNull: false,
+    },
+    location: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'Remote',
     },
     timeline: {
       type: DataTypes.STRING,

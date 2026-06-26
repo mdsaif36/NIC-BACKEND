@@ -207,6 +207,18 @@ async function startServer() {
     await sequelize.sync({ alter: process.env.NODE_ENV === 'development' && !isSqlite });
     console.log('✅ Database tables synchronized.');
 
+    if (isSqlite) {
+      try {
+        await sequelize.query("ALTER TABLE `ReferralRequests` ADD COLUMN `location` VARCHAR(255) DEFAULT 'Remote'");
+        console.log('✅ Added location column to ReferralRequests SQLite table.');
+      } catch (err: any) {
+        // Ignore if column already exists
+        if (!err.message.includes('duplicate column name') && !err.message.includes('already exists')) {
+          console.log('Note: could not add location column to ReferralRequests (might already exist):', err.message);
+        }
+      }
+    }
+
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📚 API Docs: http://localhost:${PORT}/api-docs`);

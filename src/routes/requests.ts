@@ -38,7 +38,7 @@ const router = Router();
 router.post('/', authenticate as any, requireSeeker, async (req: AuthRequest, res: Response) => {
   try {
     const seeker = req.user!;
-    const { alumniId, targetRole, timeline, pitchMessage } = req.body;
+    const { alumniId, targetRole, timeline, pitchMessage, location } = req.body;
 
     if (!alumniId || !targetRole || !timeline || !pitchMessage) {
       return res.status(400).json({ message: 'All fields are required.' });
@@ -61,6 +61,7 @@ router.post('/', authenticate as any, requireSeeker, async (req: AuthRequest, re
       seekerId: seeker.id,
       alumniId,
       targetRole,
+      location: location || 'Remote',
       timeline,
       pitchMessage,
       status: 'pending',
@@ -94,6 +95,7 @@ router.post('/', authenticate as any, requireSeeker, async (req: AuthRequest, re
         class: `${seeker.branch || 'CSE'} ${seeker.year || '3rd Year'}, ${seeker.college || 'IIT Bombay'}`,
         company: alumni.company || '',
         role: targetRole,
+        location: request.location,
         score: '94% Match',
         message: pitchMessage,
         status: 'pending',
