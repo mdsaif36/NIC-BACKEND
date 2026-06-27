@@ -7,6 +7,10 @@ import { UserActivity } from '../models/UserActivity.js';
 import { ReferralPost } from '../models/ReferralPost.js';
 
 async function seed() {
+  if (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging') {
+    console.warn('⚠️ Seeder: Seeding is disabled in production and staging environments.');
+    process.exit(0);
+  }
   try {
     await sequelize.authenticate();
     console.log('Seeder: Database connected.');

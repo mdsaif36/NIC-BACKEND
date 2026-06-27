@@ -173,7 +173,7 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
     const googleClientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
 
     // Local Testing / Developer Fallback Mode
-    if (token === 'mock-google-token' || !googleClientId) {
+    if (token === 'mock-google-token') {
       console.log('Google Auth: Using Developer Testing Fallback Mode');
       email = reqEmail || 'mock_google_user@kiit.ac.in';
       name = reqName || 'Mock Google User';
@@ -188,7 +188,7 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
         const payload = await tokenVerifyRes.json() as any;
         
         // Verify client ID matches if configured
-        if (payload.aud !== googleClientId) {
+        if (googleClientId && payload.aud !== googleClientId) {
           return res.status(400).json({ message: 'Token audience mismatch. Client ID mismatch.' });
         }
 

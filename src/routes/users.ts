@@ -351,6 +351,11 @@ router.get('/resume/download/:userId/:filename', authenticate as any, async (req
       return res.status(400).json({ message: 'Invalid user ID format.' });
     }
 
+    // Security check: only allow if user is downloading their own resume OR they are an alumni
+    if (req.user!.id !== parsedUserId && req.user!.role !== 'alumni') {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
     const decodedFilename = decodeURIComponent(filename);
     if (decodedFilename.startsWith('http://') || decodedFilename.startsWith('https://')) {
       return res.redirect(decodedFilename);
@@ -450,7 +455,8 @@ ${350 + streamBody.length}
 // Get User Activity Log
 router.get('/activity/:userId', authenticate as any, async (req: AuthRequest, res: Response) => {
   try {
-    const { userId } = req.params;
+    // Strict Verification: Use the ID from the verified token rather than an ID passed in the URL parameters
+    const userId = req.user!.id;
     const activities = await UserActivity.findAll({
       where: { userId },
       attributes: ['date', 'count'],
@@ -685,7 +691,14 @@ router.post('/verify/admin-reject/:userId', authenticate as any, async (req: Aut
 router.get('/verify/screenshot/:userId', authenticate as any, async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
-    const targetUser = await User.findByPk(userId);
+    
+    // Security check: only allow if user is viewing their own screenshot OR they are an alumni
+    const parsedUserId = parseInt(userId, 10);
+    if (req.user!.id !== parsedUserId && req.user!.role !== 'alumni') {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
+    const targetUser = await User.findByPk(parsedUserId);
     if (!targetUser || !targetUser.employeeScreenshot) {
       return res.status(404).json({ message: 'Screenshot not found.' });
     }
