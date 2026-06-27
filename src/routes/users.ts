@@ -9,6 +9,7 @@ import path from 'path';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import { extractTextFromPdf, parseProfileWithLLM, generateCareerIntelligence } from '../utils/aiParser.js';
+import os from 'os';
 import { calculateMatch } from '../utils/aiRecommender.js';
 
 import { storageService } from '../utils/storageService.js';
@@ -377,8 +378,16 @@ router.get('/resume/download/:userId/:filename', authenticate as any, async (req
     }
 
     const cleanFilename = path.basename(filename);
-    const filePath = path.join(uploadDir, String(parsedUserId), cleanFilename);
+    let filePath = path.join(uploadDir, String(parsedUserId), cleanFilename);
     
+    if (!fs.existsSync(filePath)) {
+      // Check temp directory fallback
+      const tmpPath = path.join(os.tmpdir(), 'nextincampus', 'resumes', String(parsedUserId), cleanFilename);
+      if (fs.existsSync(tmpPath)) {
+        filePath = tmpPath;
+      }
+    }
+
     if (!fs.existsSync(filePath)) {
       const seekerName = seeker ? seeker.name : 'Student';
       

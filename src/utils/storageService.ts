@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } fro
 import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 // ─── Supabase / AWS S3 Storage Provider ────────────────────────────────────────
 
@@ -23,21 +24,27 @@ class S3Provider {
     this.prefix = prefix;
     this.bucket = process.env.AWS_S3_BUCKET || 'resumes';
     
-    // The endpoint is required for Supabase to act like AWS S3
-    const endpoint = process.env.AWS_ENDPOINT || 'https://your-project.supabase.co/storage/v1/s3';
-
-    this.s3Client = new S3Client({
+    // AWS Configuration options
+    const s3Config: any = {
       region: process.env.AWS_REGION || 'ap-south-1',
-      endpoint: endpoint,
-      forcePathStyle: true, // Must be true for Supabase S3 API
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
       },
-    });
+    };
+
+    const endpoint = process.env.AWS_ENDPOINT;
+    const hasEndpoint = endpoint && !endpoint.includes('your-project.supabase.co');
+
+    if (hasEndpoint) {
+      s3Config.endpoint = endpoint;
+      s3Config.forcePathStyle = true; // Required for Supabase S3 API
+    }
+
+    this.s3Client = new S3Client(s3Config);
   }
 
-  // Uploads a file buffer directly to the S3 bucket, with a local fallback for development
+  // Uploads a file buffer directly to the S3 bucket, with a local fallback for development/read-only systems
   async saveFile(userId: string | number, filename: string, buffer: Buffer): Promise<UploadedFile> {
     const key = `${this.prefix}/${userId}/${Date.now()}-${filename}`;
     
@@ -57,7 +64,10 @@ class S3Provider {
         }));
 
         const endpoint = process.env.AWS_ENDPOINT || 'https://your-project.supabase.co/storage/v1/s3';
-        const publicBaseUrl = endpoint.replace('/storage/v1/s3', '/storage/v1/object/public');
+        const publicBaseUrl = endpoint.includes('your-project.supabase.co')
+          ? endpoint.replace('/storage/v1/s3', '/storage/v1/object/public')
+          : endpoint; // If standard S3, publicBaseUrl will just be the custom endpoint if set
+        
         const publicUrl = `${publicBaseUrl}/${this.bucket}/${key}`;
 
         return {
@@ -75,9 +85,17 @@ class S3Provider {
 
     // --- Local Filesystem Fallback ---
     console.log('[Storage] Saving file to local storage directory...');
-    const localDir = path.join(process.cwd(), 'uploads', this.prefix, String(userId));
-    if (!fs.existsSync(localDir)) {
-      fs.mkdirSync(localDir, { recursive: true });
+    let localDir = path.join(process.cwd(), 'uploads', this.prefix, String(userId));
+    try {
+      if (!fs.existsSync(localDir)) {
+        fs.mkdirSync(localDir, { recursive: true });
+      }
+    } catch (mkdirErr) {
+      console.warn('[Storage] process.cwd() uploads folder is read-only. Falling back to system temp dir:', mkdirErr);
+      localDir = path.join(os.tmpdir(), 'nextincampus', this.prefix, String(userId));
+      if (!fs.existsSync(localDir)) {
+        fs.mkdirSync(localDir, { recursive: true });
+      }
     }
 
     const uniqueFilename = `${Date.now()}-${filename}`;
@@ -126,9 +144,16 @@ class S3Provider {
     // --- Local Delete Fallback ---
     try {
       const cleanFilename = path.basename(filename);
-      const filePath = path.join(process.cwd(), 'uploads', this.prefix, String(userId), cleanFilename);
+      // Try project uploads dir first
+      let filePath = path.join(process.cwd(), 'uploads', this.prefix, String(userId), cleanFilename);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
+      } else {
+        // Try system temp dir
+        filePath = path.join(os.tmpdir(), 'nextincampus', this.prefix, String(userId), cleanFilename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
       }
     } catch (localErr) {
       console.error('Local File Delete Error:', localErr);
@@ -170,7 +195,12 @@ class S3Provider {
 
     // --- Local Filesystem Fallback ---
     const cleanFilename = path.basename(filename);
-    const filePath = path.join(process.cwd(), 'uploads', this.prefix, String(userId), cleanFilename);
+    let filePath = path.join(process.cwd(), 'uploads', this.prefix, String(userId), cleanFilename);
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath);
+    }
+    // Try system temp dir
+    filePath = path.join(os.tmpdir(), 'nextincampus', this.prefix, String(userId), cleanFilename);
     if (fs.existsSync(filePath)) {
       return fs.readFileSync(filePath);
     }
@@ -205,7 +235,12 @@ class S3Provider {
 
     // --- Local Filesystem Fallback ---
     const cleanFilename = path.basename(filename);
-    const filePath = path.join(process.cwd(), 'uploads', this.prefix, String(userId), cleanFilename);
+    let filePath = path.join(process.cwd(), 'uploads', this.prefix, String(userId), cleanFilename);
+    if (fs.existsSync(filePath)) {
+      return fs.createReadStream(filePath) as any;
+    }
+    // Try system temp dir
+    filePath = path.join(os.tmpdir(), 'nextincampus', this.prefix, String(userId), cleanFilename);
     if (fs.existsSync(filePath)) {
       return fs.createReadStream(filePath) as any;
     }
@@ -227,7 +262,9 @@ class StorageService {
   getResumeUrl(userId: string | number, filename: string): string {
     if (filename.startsWith('http') || filename.startsWith('/')) return filename;
     const endpoint = process.env.AWS_ENDPOINT || 'https://your-project.supabase.co/storage/v1/s3';
-    const publicBaseUrl = endpoint.replace('/storage/v1/s3', '/storage/v1/object/public');
+    const publicBaseUrl = endpoint.includes('your-project.supabase.co')
+      ? endpoint.replace('/storage/v1/s3', '/storage/v1/object/public')
+      : endpoint;
     const bucket = process.env.AWS_S3_BUCKET || 'resumes';
     return `${publicBaseUrl}/${bucket}/resumes/${userId}/${encodeURIComponent(filename)}`;
   }
@@ -235,7 +272,9 @@ class StorageService {
   getScreenshotUrl(userId: string | number, filename: string): string {
     if (filename.startsWith('http') || filename.startsWith('/')) return filename;
     const endpoint = process.env.AWS_ENDPOINT || 'https://your-project.supabase.co/storage/v1/s3';
-    const publicBaseUrl = endpoint.replace('/storage/v1/s3', '/storage/v1/object/public');
+    const publicBaseUrl = endpoint.includes('your-project.supabase.co')
+      ? endpoint.replace('/storage/v1/s3', '/storage/v1/object/public')
+      : endpoint;
     const bucket = process.env.AWS_S3_BUCKET || 'resumes';
     return `${publicBaseUrl}/${bucket}/screenshots/${userId}/${encodeURIComponent(filename)}`;
   }
