@@ -205,46 +205,21 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
     // Check if user exists
     let user = await User.findOne({ where: { email: safeEmail } });
 
-    if (user) {
-      // Role verification
-      if (user.role !== role) {
-        return res.status(400).json({ message: `An account with this email already exists as a ${user.role}.` });
-      }
-      // Link Google ID if not set
-      if (!user.googleId) {
-        user.googleId = googleId;
-        await user.save();
-      }
-    } else {
-      // Register passwordless user
-      const referralsSentCount = role === 'alumni' ? 0 : undefined;
-      const availability = role === 'alumni' ? 'Available Now' : undefined;
-      const responseRate = role === 'alumni' ? '92%' : undefined;
-      const responseSpeed = role === 'alumni' ? 'Within 1 day' : undefined;
-      const successRate = role === 'alumni' ? '0 referred' : undefined;
-
-      user = await User.create({
-        email: safeEmail,
-        role,
-        name,
-        college: college || 'University Network',
-        googleId,
-        referralsSentCount,
-        availability,
-        responseRate,
-        responseSpeed,
-        successRate,
-        skills: role === 'seeker' ? ['Python', 'React', 'DSA'] : [],
-        skillDetails: role === 'seeker' ? {
-          'Python': { proficiency: 4, type: 'technical' },
-          'React': { proficiency: 3, type: 'technical' },
-          'DSA': { proficiency: 4, type: 'domain' }
-        } : {},
-        targetCompanies: role === 'seeker' ? ['Google', 'Microsoft'] : [],
-        resumeName: role === 'seeker' ? `${name.toLowerCase().replace(/\s+/g, '_')}_cv.pdf` : undefined,
-        resumeUploaded: role === 'seeker' ? true : false,
-        bio: role === 'seeker' ? 'Candidate seeking referral opportunities.' : 'Alumni mentor eager to refer top talent.'
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Account not found. Please sign up first to use Google Login."
       });
+    }
+
+    // Role verification
+    if (user.role !== role) {
+      return res.status(400).json({ message: `An account with this email already exists as a ${user.role}.` });
+    }
+    // Link Google ID if not set
+    if (!user.googleId) {
+      user.googleId = googleId;
+      await user.save();
     }
 
     const localToken = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
