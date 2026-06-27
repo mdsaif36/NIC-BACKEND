@@ -81,7 +81,8 @@ router.post('/signup', async (req, res) => {
         name: user.name,
         college: user.college,
         company: user.company,
-        jobTitle: user.jobTitle
+        jobTitle: user.jobTitle,
+        isProfileComplete: user.isProfileComplete
       }
     });
   } catch (error: any) {
@@ -132,7 +133,8 @@ router.post('/login', async (req, res) => {
         name: user.name,
         college: user.college,
         company: user.company,
-        jobTitle: user.jobTitle
+        jobTitle: user.jobTitle,
+        isProfileComplete: user.isProfileComplete
       }
     });
   } catch (error: any) {
@@ -233,7 +235,8 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
         name: user.name,
         college: user.college,
         company: user.company,
-        jobTitle: user.jobTitle
+        jobTitle: user.jobTitle,
+        isProfileComplete: user.isProfileComplete
       }
     });
   } catch (error: any) {
@@ -390,7 +393,8 @@ router.post('/github', async (req: AuthRequest, res: Response) => {
         name: user.name,
         college: user.college,
         company: user.company,
-        jobTitle: user.jobTitle
+        jobTitle: user.jobTitle,
+        isProfileComplete: user.isProfileComplete
       }
     });
   } catch (error: any) {

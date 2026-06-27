@@ -141,7 +141,11 @@ router.put('/profile', authenticate as any, async (req: AuthRequest, res: Respon
       hideEmail,
       hidePhone,
       hideLinkedIn,
-      hideCompanyEmail
+      hideCompanyEmail,
+      isProfileComplete,
+      primaryDomain,
+      preferredContactHours,
+      mentorshipAvailability
     } = req.body;
 
     // Update fields
@@ -176,6 +180,12 @@ router.put('/profile', authenticate as any, async (req: AuthRequest, res: Respon
     if (hidePhone !== undefined) user.hidePhone = hidePhone;
     if (hideLinkedIn !== undefined) user.hideLinkedIn = hideLinkedIn;
     if (hideCompanyEmail !== undefined) user.hideCompanyEmail = hideCompanyEmail;
+    
+    // Onboarding setup wizard fields
+    if (isProfileComplete !== undefined) user.isProfileComplete = isProfileComplete;
+    if (primaryDomain !== undefined) user.primaryDomain = primaryDomain;
+    if (preferredContactHours !== undefined) user.preferredContactHours = preferredContactHours;
+    if (mentorshipAvailability !== undefined) user.mentorshipAvailability = mentorshipAvailability;
 
     // Regenerate career intelligence if profile details or active resume changed
     if (

@@ -55,6 +55,10 @@ export class User extends Model {
   declare careerIntelligence?: any;
   declare resetToken?: string;
   declare resetTokenExpiry?: Date;
+  declare isProfileComplete: boolean;
+  declare primaryDomain?: string;
+  declare preferredContactHours?: string;
+  declare mentorshipAvailability?: string;
 }
 
 User.init(
@@ -344,6 +348,23 @@ User.init(
     },
     resetTokenExpiry: {
       type: DataTypes.DATE,
+      allowNull: true,
+    },
+    isProfileComplete: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    primaryDomain: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    preferredContactHours: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    mentorshipAvailability: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
     trustScore: {
