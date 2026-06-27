@@ -82,7 +82,8 @@ router.post('/signup', async (req, res) => {
         college: user.college,
         company: user.company,
         jobTitle: user.jobTitle,
-        isProfileComplete: user.isProfileComplete
+        isProfileComplete: user.isProfileComplete,
+        savedAlumniIds: user.savedAlumniIds || []
       }
     });
   } catch (error: any) {
@@ -134,7 +135,8 @@ router.post('/login', async (req, res) => {
         college: user.college,
         company: user.company,
         jobTitle: user.jobTitle,
-        isProfileComplete: user.isProfileComplete
+        isProfileComplete: user.isProfileComplete,
+        savedAlumniIds: user.savedAlumniIds || []
       }
     });
   } catch (error: any) {
@@ -236,7 +238,8 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
         college: user.college,
         company: user.company,
         jobTitle: user.jobTitle,
-        isProfileComplete: user.isProfileComplete
+        isProfileComplete: user.isProfileComplete,
+        savedAlumniIds: user.savedAlumniIds || []
       }
     });
   } catch (error: any) {
@@ -394,7 +397,8 @@ router.post('/github', async (req: AuthRequest, res: Response) => {
         college: user.college,
         company: user.company,
         jobTitle: user.jobTitle,
-        isProfileComplete: user.isProfileComplete
+        isProfileComplete: user.isProfileComplete,
+        savedAlumniIds: user.savedAlumniIds || []
       }
     });
   } catch (error: any) {

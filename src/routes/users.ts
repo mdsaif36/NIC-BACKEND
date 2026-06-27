@@ -146,7 +146,8 @@ router.put('/profile', authenticate as any, async (req: AuthRequest, res: Respon
       isProfileComplete,
       primaryDomain,
       preferredContactHours,
-      mentorshipAvailability
+      mentorshipAvailability,
+      savedAlumniIds
     } = req.body;
 
     // Update fields
@@ -166,6 +167,7 @@ router.put('/profile', authenticate as any, async (req: AuthRequest, res: Respon
     if (resumeUploaded !== undefined) user.resumeUploaded = resumeUploaded;
     if (resumeName !== undefined) user.resumeName = resumeName;
     if (resumesHistory !== undefined) user.resumesHistory = resumesHistory;
+    if (savedAlumniIds !== undefined) user.savedAlumniIds = savedAlumniIds;
 
     // Alumni specific fields
     if (availability !== undefined) user.availability = availability;
@@ -207,8 +209,9 @@ router.put('/profile', authenticate as any, async (req: AuthRequest, res: Respon
       let resumeText = "";
       if (isUploadedToUse && resumeNameToUse) {
         try {
-          const filePath = path.join(uploadDir, String(user.id), resumeNameToUse);
-          if (fs.existsSync(filePath) && path.extname(resumeNameToUse).toLowerCase() === '.pdf') {
+          const cleanFilename = path.basename(resumeNameToUse);
+          const filePath = path.join(uploadDir, String(user.id), cleanFilename);
+          if (fs.existsSync(filePath) && path.extname(cleanFilename).toLowerCase() === '.pdf') {
             const buffer = fs.readFileSync(filePath);
             resumeText = await extractTextFromPdf(buffer);
           }

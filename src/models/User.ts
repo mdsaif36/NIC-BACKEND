@@ -53,6 +53,7 @@ export class User extends Model {
   declare hideLinkedIn: boolean;
   declare hideCompanyEmail: boolean;
   declare careerIntelligence?: any;
+  declare savedAlumniIds?: number[];
   declare resetToken?: string;
   declare resetTokenExpiry?: Date;
   declare isProfileComplete: boolean;
@@ -340,6 +341,17 @@ User.init(
       },
       set(val: any) {
         this.setDataValue('careerIntelligence', val ? JSON.stringify(val) : null);
+      },
+    },
+    savedAlumniIds: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      get() {
+        const rawValue = this.getDataValue('savedAlumniIds');
+        return rawValue ? JSON.parse(rawValue) : [];
+      },
+      set(val: number[]) {
+        this.setDataValue('savedAlumniIds', val ? JSON.stringify(val) : JSON.stringify([]));
       },
     },
     resetToken: {

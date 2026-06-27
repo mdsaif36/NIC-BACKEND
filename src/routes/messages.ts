@@ -218,13 +218,15 @@ router.post('/', authenticate as any, async (req: AuthRequest, res: Response) =>
 router.post('/schedule', authenticate as any, async (req: AuthRequest, res: Response) => {
   try {
     const sender = req.user!;
-    const { receiverId, date, time } = req.body;
+    const { receiverId, date, time, topic, duration } = req.body;
 
     if (!receiverId || !date || !time) {
       return res.status(400).json({ message: 'Receiver, date, and time are required.' });
     }
 
-    const scheduledText = `📅 Scheduled a meeting for ${date} at ${time}.`;
+    const topicStr = topic ? ` | Topic: ${topic}` : '';
+    const durationStr = duration ? ` | Duration: ${duration}` : '';
+    const scheduledText = `📅 Meeting Scheduled for ${date} at ${time}${topicStr}${durationStr}.`;
 
     const message = await Message.create({
       senderId: sender.id,
@@ -238,13 +240,13 @@ router.post('/schedule', authenticate as any, async (req: AuthRequest, res: Resp
       userId: receiverId,
       type: 'meeting_scheduled',
       title: '📅 Meeting Scheduled',
-      message: `${sender.name} has scheduled a meeting for ${date} at ${time}.`,
+      message: `${sender.name} has scheduled a meeting on ${date} at ${time}${topicStr}${durationStr}.`,
       actionUrl: '?tab=messages',
-      metadata: { senderId: sender.id, senderName: sender.name, date, time },
+      metadata: { senderId: sender.id, senderName: sender.name, date, time, topic, duration },
     });
 
     // Audit
-    logAudit(req, 'MEETING_SCHEDULED', 'Message', message.id, { receiverId, date, time });
+    logAudit(req, 'MEETING_SCHEDULED', 'Message', message.id, { receiverId, date, time, topic, duration });
 
     const io = req.app.get('io');
     if (io) {

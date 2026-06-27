@@ -217,6 +217,14 @@ async function startServer() {
           console.log('Note: could not add location column to ReferralRequests (might already exist):', err.message);
         }
       }
+      try {
+        await sequelize.query("ALTER TABLE `Users` ADD COLUMN `savedAlumniIds` TEXT DEFAULT '[]'");
+        console.log('✅ Added savedAlumniIds column to Users SQLite table.');
+      } catch (err: any) {
+        if (!err.message.includes('duplicate column name') && !err.message.includes('already exists')) {
+          console.log('Note: could not add savedAlumniIds column to Users (might already exist):', err.message);
+        }
+      }
     }
 
     server.listen(PORT, () => {
