@@ -16,6 +16,9 @@ export const sendWelcomeEmail = async (email: string, name: string, role: string
   const htmlContent = isSeeker 
     ? `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
+        <div style="text-align: center; margin-bottom: 25px;">
+          <img src="https://nextincampus.in/logo.png" alt="NextInCampus Logo" style="height: 50px; width: auto;" />
+        </div>
         <p>Hi ${name},</p>
         <p>Welcome to NextInCampus. You are now part of an elite network designed to bypass the 'resume black hole.'</p>
         <p>Your dashboard is active, and your 5 Premium Referral Credits have been credited to your account. Remember: quality beats quantity here. Use your credits to pitch to the mentors who best align with your career goals.</p>
@@ -25,6 +28,9 @@ export const sendWelcomeEmail = async (email: string, name: string, role: string
     `
     : `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
+        <div style="text-align: center; margin-bottom: 25px;">
+          <img src="https://nextincampus.in/logo.png" alt="NextInCampus Logo" style="height: 50px; width: auto;" />
+        </div>
         <p>Hi ${name},</p>
         <p>Welcome to NextInCampus. We are honored to have an experienced professional like you in our network.</p>
         <p>Your expertise is the most valuable part of our platform. By joining, you are helping us maintain a 'zero-spam' environment where top-tier students can connect with insiders like you. You will now receive curated referral requests from candidates who have passed our platform's intent-filter.</p>
@@ -59,6 +65,9 @@ export const sendPasswordResetEmail = async (email: string, resetLink: string) =
       subject: 'Password Reset Request',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
+          <div style="text-align: center; margin-bottom: 25px;">
+            <img src="https://nextincampus.in/logo.png" alt="NextInCampus Logo" style="height: 50px; width: auto;" />
+          </div>
           <h2>Password Reset</h2>
           <p>You requested to reset your password. Click the link below to create a new one. This link will expire in 15 minutes.</p>
           <a href="${resetLink}" style="padding: 10px 20px; background-color: #10B981; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
