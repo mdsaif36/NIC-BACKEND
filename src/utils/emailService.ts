@@ -17,7 +17,7 @@ export const sendWelcomeEmail = async (email: string, name: string, role: string
     ? `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
         <div style="text-align: center; margin-bottom: 25px;">
-          <img src="https://nextincampus.in/logo.png" alt="NextInCampus Logo" style="height: 50px; width: auto;" />
+          <img src="https://nic-frontend-beta.vercel.app/logo.png" alt="NextInCampus Logo" style="height: 50px; width: auto;" />
         </div>
         <p>Hi ${name},</p>
         <p>Welcome to NextInCampus. You are now part of an elite network designed to bypass the 'resume black hole.'</p>
@@ -29,7 +29,7 @@ export const sendWelcomeEmail = async (email: string, name: string, role: string
     : `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
         <div style="text-align: center; margin-bottom: 25px;">
-          <img src="https://nextincampus.in/logo.png" alt="NextInCampus Logo" style="height: 50px; width: auto;" />
+          <img src="https://nic-frontend-beta.vercel.app/logo.png" alt="NextInCampus Logo" style="height: 50px; width: auto;" />
         </div>
         <p>Hi ${name},</p>
         <p>Welcome to NextInCampus. We are honored to have an experienced professional like you in our network.</p>
@@ -66,7 +66,7 @@ export const sendPasswordResetEmail = async (email: string, resetLink: string) =
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
           <div style="text-align: center; margin-bottom: 25px;">
-            <img src="https://nextincampus.in/logo.png" alt="NextInCampus Logo" style="height: 50px; width: auto;" />
+            <img src="https://nic-frontend-beta.vercel.app/logo.png" alt="NextInCampus Logo" style="height: 50px; width: auto;" />
           </div>
           <h2>Password Reset</h2>
           <p>You requested to reset your password. Click the link below to create a new one. This link will expire in 15 minutes.</p>
