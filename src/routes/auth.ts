@@ -22,6 +22,12 @@ router.post('/signup', async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ where: { email: safeEmail } });
     if (existingUser) {
+      if (existingUser.role !== role) {
+        return res.status(400).json({ 
+          message: `An account with this email already exists as a ${existingUser.role}. You cannot use the same email for both Seeker and Alumni accounts.`,
+          error: `An account with this email already exists as a ${existingUser.role}. You cannot use the same email for both Seeker and Alumni accounts.` 
+        });
+      }
       return res.status(400).json({ 
         message: 'An account with this email already exists. Please log in.',
         error: 'An account with this email already exists. Please log in.' 
@@ -216,7 +222,7 @@ router.post('/google', async (req: AuthRequest, res: Response) => {
 
     // Role verification
     if (user.role !== role) {
-      return res.status(400).json({ message: `An account with this email already exists as a ${user.role}.` });
+      return res.status(400).json({ message: `An account with this email already exists as a ${user.role}. You cannot use the same email for both Seeker and Alumni accounts.` });
     }
     // Link Google ID if not set
     if (!user.googleId) {
@@ -344,7 +350,7 @@ router.post('/github', async (req: AuthRequest, res: Response) => {
     if (user) {
       // Role verification
       if (user.role !== role) {
-        return res.status(400).json({ message: `An account with this email already exists as a ${user.role}.` });
+        return res.status(400).json({ message: `An account with this email already exists as a ${user.role}. You cannot use the same email for both Seeker and Alumni accounts.` });
       }
       // Link GitHub ID if not set
       if (!user.githubId) {
