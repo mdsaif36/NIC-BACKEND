@@ -19,6 +19,7 @@ import messageRoutes from './routes/messages.js';
 import referralPostRoutes from './routes/referralPosts.js';
 import notificationRoutes from './routes/notifications.js';
 import applicationRoutes from './routes/applications.js';
+import reportRoutes from './routes/report.js';
 
 // Model imports (register associations)
 import './models/UserActivity.js';
@@ -155,6 +156,7 @@ app.use('/api/referral-posts', referralPostRoutes);
 app.use('/api/referrals', referralPostRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/applications', applicationRoutes);
+app.use('/api', reportRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
