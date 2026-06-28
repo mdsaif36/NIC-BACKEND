@@ -5,20 +5,23 @@ const router = Router();
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 router.post('/report-issue', async (req, res) => {
+  console.log("Incoming Report Data:", req.body);
+  
   const { description, pageUrl, userEmail, userName, userRole, createdAt } = req.body;
+  const roleDisplay = userRole || "Not Specified";
 
   try {
     // EMAIL 1: The Report to YOU
     await resend.emails.send({
       from: 'NextInCampus Alerts <notifications@nextincampus.in>',
       to: 'nextincampus@gmail.com',
-      subject: `🚨 Issue: ${String(userRole).toUpperCase()} Report`,
+      subject: `🚨 Issue: ${roleDisplay.toUpperCase()} Report`,
       html: `
         <h3>New Issue Report</h3>
         <p><strong>Name:</strong> ${userName}</p>
         <p><strong>Email:</strong> ${userEmail}</p>
-        <p><strong>Account Created:</strong> ${createdAt}</p>
-        <p><strong>Role:</strong> ${userRole}</p>
+        <p><strong>Role:</strong> ${roleDisplay}</p>
+        <p><strong>Created At:</strong> ${createdAt}</p>
         <p><strong>URL:</strong> ${pageUrl}</p>
         <p><strong>Issue:</strong><br>${description?.replace(/\n/g, '<br>')}</p>
       `,
