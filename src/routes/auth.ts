@@ -13,6 +13,49 @@ if (!process.env.RESEND_API_KEY) {
 }
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
 
+const sendWelcomeEmail = async (email: string, name: string, role: string) => {
+  const fromEmail = process.env.FROM_EMAIL || 'NextInCampus <onboarding@resend.dev>';
+  
+  let subject = "Welcome to NextInCampus!";
+  let htmlContent = "";
+
+  if (role === 'seeker') {
+    subject = "Welcome to NextInCampus – Your Referral Credits are ready!";
+    htmlContent = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
+        <p>Hi ${name},</p>
+        <p>Welcome to NextInCampus. You are now part of an elite network designed to bypass the 'resume black hole.'</p>
+        <p>Your dashboard is active, and your 5 Premium Referral Credits have been credited to your account. Remember: quality beats quantity here. Use your credits to pitch to the mentors who best align with your career goals.</p>
+        <p>Let’s get you referred.</p>
+        <p>Best,<br/>The NextInCampus Team</p>
+      </div>
+    `;
+  } else if (role === 'alumni') {
+    subject = "Welcome to the NextInCampus Inner Circle";
+    htmlContent = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
+        <p>Hi ${name},</p>
+        <p>Welcome to NextInCampus. We are honored to have an experienced professional like you in our network.</p>
+        <p>Your expertise is the most valuable part of our platform. By joining, you are helping us maintain a 'zero-spam' environment where top-tier students can connect with insiders like you. You will now receive curated referral requests from candidates who have passed our platform's intent-filter.</p>
+        <p>Thank you for choosing to pay it forward.</p>
+        <p>Best,<br/>The NextInCampus Team</p>
+      </div>
+    `;
+  }
+
+  try {
+    await resend.emails.send({
+      from: fromEmail,
+      to: email,
+      subject: subject,
+      html: htmlContent
+    });
+    console.log(`Welcome email successfully sent to ${email} (${role})`);
+  } catch (err) {
+    console.error("Failed to send welcome email:", err);
+  }
+};
+
 // Sign Up Route
 router.post('/signup', async (req, res) => {
   try {
@@ -68,6 +111,9 @@ router.post('/signup', async (req, res) => {
       resumeUploaded: role === 'seeker' ? true : false,
       bio: role === 'seeker' ? 'Candidate seeking referral opportunities.' : 'Alumni mentor eager to refer top talent.'
     });
+
+    // Send welcome email
+    sendWelcomeEmail(user.email, user.name, user.role);
 
     // Generate token
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
@@ -383,6 +429,9 @@ router.post('/github', async (req: AuthRequest, res: Response) => {
         resumeUploaded: role === 'seeker' ? true : false,
         bio: role === 'seeker' ? 'Candidate seeking referral opportunities.' : 'Alumni mentor eager to refer top talent.'
       });
+
+      // Send welcome email for newly created social user
+      sendWelcomeEmail(user.email, user.name, user.role);
     }
 
     const localToken = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
