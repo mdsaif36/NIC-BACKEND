@@ -2,59 +2,11 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { Resend } from 'resend';
 import { User } from '../models/User.js';
 import { authenticate, AuthRequest, JWT_SECRET } from '../middleware/auth.js';
+import { sendWelcomeEmail, sendPasswordResetEmail } from '../utils/emailService.js';
 
 const router = Router();
-
-if (!process.env.RESEND_API_KEY) {
-  console.warn("⚠️ RESEND_API_KEY is not defined. Password reset emails will fail to send.");
-}
-const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
-
-const sendWelcomeEmail = async (email: string, name: string, role: string) => {
-  const fromEmail = process.env.FROM_EMAIL || 'NextInCampus <onboarding@resend.dev>';
-  
-  let subject = "Welcome to NextInCampus!";
-  let htmlContent = "";
-
-  if (role === 'seeker') {
-    subject = "Welcome to NextInCampus – Your Referral Credits are ready!";
-    htmlContent = `
-      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
-        <p>Hi ${name},</p>
-        <p>Welcome to NextInCampus. You are now part of an elite network designed to bypass the 'resume black hole.'</p>
-        <p>Your dashboard is active, and your 5 Premium Referral Credits have been credited to your account. Remember: quality beats quantity here. Use your credits to pitch to the mentors who best align with your career goals.</p>
-        <p>Let’s get you referred.</p>
-        <p>Best,<br/>The NextInCampus Team</p>
-      </div>
-    `;
-  } else if (role === 'alumni') {
-    subject = "Welcome to the NextInCampus Inner Circle";
-    htmlContent = `
-      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6;">
-        <p>Hi ${name},</p>
-        <p>Welcome to NextInCampus. We are honored to have an experienced professional like you in our network.</p>
-        <p>Your expertise is the most valuable part of our platform. By joining, you are helping us maintain a 'zero-spam' environment where top-tier students can connect with insiders like you. You will now receive curated referral requests from candidates who have passed our platform's intent-filter.</p>
-        <p>Thank you for choosing to pay it forward.</p>
-        <p>Best,<br/>The NextInCampus Team</p>
-      </div>
-    `;
-  }
-
-  try {
-    await resend.emails.send({
-      from: fromEmail,
-      to: email,
-      subject: subject,
-      html: htmlContent
-    });
-    console.log(`Welcome email successfully sent to ${email} (${role})`);
-  } catch (err) {
-    console.error("Failed to send welcome email:", err);
-  }
-};
 
 // Sign Up Route
 router.post('/signup', async (req, res) => {
@@ -483,21 +435,9 @@ router.post('/forgot-password', async (req, res) => {
     user.resetTokenExpiry = resetTokenExpiry;
     await user.save();
 
-    // D. Send the email using Resend
+    // D. Send the email using emailService
     const resetLink = `https://nic-frontend-beta.vercel.app/reset-password?token=${resetToken}`;
-
-    // FIRE AND FORGET USING RESEND
-    resend.emails.send({
-      from: 'NextInCampus <onboarding@resend.dev>', // Resend gives you this free testing email!
-      to: email, // IMPORTANT: While testing on the free tier, this MUST be the email you used to sign up for Resend!
-      subject: 'Password Reset Request',
-      html: `
-        <h2>Password Reset</h2>
-        <p>You requested to reset your password. Click the link below to create a new one. This link will expire in 15 minutes.</p>
-        <a href="${resetLink}" style="padding: 10px 20px; background-color: #10B981; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
-        <p>If you did not request this, please ignore this email.</p>
-      `
-    }).catch(err => console.error("Resend error:", err));
+    sendPasswordResetEmail(email, resetLink);
 
     res.status(200).json({ message: "Password reset link sent to email." });
   } catch (error: any) {
