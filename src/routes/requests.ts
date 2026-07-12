@@ -100,8 +100,11 @@ router.post('/', authenticate as any, requireSeeker, async (req: AuthRequest, re
         message: pitchMessage,
         status: 'pending',
         seekerId: seeker.id,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        createdAt: new Date().toISOString(),
         resumeName: seeker.resumeName || '',
-        resumeUploaded: seeker.resumeUploaded || false,
+        resumeUploaded: Boolean(seeker.resumeName || seeker.resumeUploaded),
+        seeker: seeker,
       });
     }
 
