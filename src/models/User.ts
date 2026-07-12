@@ -24,6 +24,7 @@ export class User extends Model {
   declare resumeName?: string;
   declare resumeUploaded: boolean;
   declare resumesHistory?: any[];
+  declare resumeFileBase64?: string;
   declare referralsSentCount: number;
   declare availability: string;
   declare responseRate: string;
@@ -190,6 +191,10 @@ User.init(
       set(val: any[]) {
         this.setDataValue('resumesHistory', val ? JSON.stringify(val) : JSON.stringify([]));
       },
+    },
+    resumeFileBase64: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     referralsSentCount: {
       type: DataTypes.INTEGER,

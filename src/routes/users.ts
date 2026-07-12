@@ -285,6 +285,7 @@ router.post('/resume/upload', authenticate as any, upload.single('resume'), asyn
     user.resumesHistory = history;
     user.resumeName = publicUrl;
     user.resumeUploaded = true;
+    user.resumeFileBase64 = req.file.buffer.toString('base64');
 
     // AI Resume Parsing & Profile Extraction
     const ext = path.extname(name).toLowerCase();
@@ -388,6 +389,19 @@ router.get('/resume/download/:userId/:filename', authenticate as any, async (req
       const tmpPath = path.join(os.tmpdir(), 'nextincampus', 'resumes', String(parsedUserId), cleanFilename);
       if (fs.existsSync(tmpPath)) {
         filePath = tmpPath;
+      }
+    }
+
+    if (!fs.existsSync(filePath)) {
+      if (seeker && seeker.resumeFileBase64) {
+        try {
+          const buffer = Buffer.from(seeker.resumeFileBase64, 'base64');
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `inline; filename="${cleanFilename}"`);
+          return res.send(buffer);
+        } catch (base64Err) {
+          console.error('[Resume Download] Failed decoding database resume base64:', base64Err);
+        }
       }
     }
 
